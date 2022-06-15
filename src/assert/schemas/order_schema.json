@@ -1,0 +1,126 @@
+{
+  "id": "/orderSchema",
+  "properties": {
+    "exchange": {
+      "$ref": "/addressSchema"
+    },
+    "maker": {
+      "$ref": "/addressSchema"
+    },
+    "taker": {
+      "$ref": "/addressSchema"
+    },
+    "makerRelayerFee": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "takerRelayerFee": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "makerProtocolFee": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "takerProtocolFee": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "makerReferrerFee": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "feeMethod": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "feeRecipient": {
+      "$ref": "/addressSchema"
+    },
+    "side": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "saleKind": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "target": {
+      "$ref": "/addressSchema"
+    },
+    "howToCall": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "calldata": {
+      "$ref": "/hexSchema"
+    },
+    "replacementPattern": {
+      "$ref": "/hexSchema"
+    },
+    "staticTarget": {
+      "$ref": "/addressSchema"
+    },
+    "staticExtradata": {
+      "$ref": "/hexSchema"
+    },
+    "paymentToken": {
+      "$ref": "/addressSchema"
+    },
+    "quantity": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "basePrice": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "extra": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "listingTime": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "expirationTime": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "salt": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "metadata": {
+      "$ref": "/metadataSchema"
+    },
+    "v": {
+      "$ref": "/wholeNumberSchema"
+    },
+    "r": {
+      "$ref": "/hexSchema"
+    },
+    "s": {
+      "$ref": "/hexSchema"
+    },
+    "hash": {
+      "$ref": "/hexSchema"
+    }
+  },
+  "required": [
+    "exchange",
+    "taker",
+    "maker",
+    "makerRelayerFee",
+    "takerRelayerFee",
+    "makerProtocolFee",
+    "takerProtocolFee",
+    "makerReferrerFee",
+    "feeMethod",
+    "feeRecipient",
+    "saleKind",
+    "target",
+    "howToCall",
+    "calldata",
+    "replacementPattern",
+    "staticTarget",
+    "staticExtradata",
+    "paymentToken",
+    "quantity",
+    "basePrice",
+    "extra",
+    "listingTime",
+    "salt",
+    "metadata",
+    "v",
+    "r",
+    "s",
+    "hash"
+  ],
+  "type": "object"
+}
