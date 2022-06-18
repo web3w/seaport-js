@@ -2,6 +2,7 @@ import { BigNumber } from "ethers";
 
 export const SEAPORT_CONTRACT_NAME = "Seaport";
 export const SEAPORT_CONTRACT_VERSION = "1.1";
+export const EIP_712_PRIMARY_TYPE="OrderComponents"
 export const EIP_712_ORDER_TYPE = {
     OrderComponents: [
         { name: "offerer", type: "address" },

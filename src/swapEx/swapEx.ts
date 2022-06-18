@@ -12,7 +12,7 @@ import {
 } from 'web3-wallets'
 
 import {transactionToCallData, Web3Accounts} from "web3-accounts"
-import {SeaportEx} from "../seaportEx/seaportEx";
+
 
 export interface SimpleTrades {
     value: string
@@ -23,40 +23,7 @@ export interface TradeDetails extends SimpleTrades {
     marketId: string
 }
 
-export interface ExSwapTradeData {
-    buyer: string
-    chain: string
-    chainId: string
-    contractAddress: string
-    data: string
-    errorDetail: string
-    exchangeData: string
-    executeType: string
-    marketId: string
-    orderId: string
-    standard: string
-    toAddress: string
-    tokenId: string
-    value: string
-    orderHash: string
-    schema: TokenSchemaNames
-}
-
-
 function getValidSwaps(intData: number, swaps: Array<TradeDetails>) {
-    // console.log(err)
-    // debugger
-    // const data = err.data
-    // if (err.error.data) {
-    //     // metamask
-    //     data = err.error.data.originalError.data
-    // } else {
-    //     // ethers
-    //     data = err.error.error.data
-    // }
-
-    // const intData = parseInt(data, 16)
-    // if (intData == 0) throw 'No valid swaps data by simulate'
     let bData = intData.toString(2)
 
     if (bData.length != swaps.length) {
@@ -101,7 +68,7 @@ export class SwapEx extends EventEmitter {
         this.walletInfo = {...wallet, rpcUrl: CHAIN_CONFIG[wallet.chainId].rpcs[0]}
         this.userAccount = new Web3Accounts(wallet)
         const contractAddr = EXSWAP_CONTRACTS_ADDRESSES[this.walletInfo.chainId]
-        if (!contractAddr) throw 'ElementExSwap config error ' + this.walletInfo.chainId
+        if (!contractAddr) throw 'ExSwap config error ' + this.walletInfo.chainId
         this.swapExContract = new ethers.Contract(contractAddr.ExSwap, ContractABI.swapEx.abi, this.userAccount.signer)
         this.contractAddr = contractAddr
     }
@@ -114,12 +81,10 @@ export class SwapEx extends EventEmitter {
             const funcID = val.tradeData.substring(0, 10)
             //markId 0 opensea 0xab834bab atomicMatch_(address[14],uint256[18],uint8[8],bytes,bytes,bytes,bytes,bytes,bytes,uint8[2],bytes32[5])
             if (this.walletInfo.chainId == 1 || this.walletInfo.chainId == 4) {
-                if (val.marketId == '0' && funcID != '0xab834bab') throw 'Market 0 match function encode error'
-
-                //markId 1 element 0x9d6c2062 orderMatch(DataType.Order memory buy, DataType.Sig memory buySig, DataType.Order memory sell, DataType.Sig memory sellSig, bytes32 metadata)
-                if (val.marketId == '1' && funcID != '0x9d6c2062') throw 'Element match function encode error'
-            } else {
-
+                //markId 0 opensea 0xab834bab atomicMatch_(address[14],uint256[18],uint8[8],bytes,bytes,bytes,bytes,bytes,bytes,uint8[2],bytes32[5])
+                if (val.marketId == "0" && funcID != '0xab834bab') throw 'Opensea match function encode error'
+                //markId 1 seaport 0xe7acab24 fulfillAdvancedOrder 0xe7acab24
+                if (val.marketId == "1" && funcID != '0xe7acab24') throw 'Seaport match function encode error'
             }
         }
         const value = getSwapsValue(swaps)
@@ -224,34 +189,6 @@ export class SwapEx extends EventEmitter {
             }
         }
     }
-
-    // public tradeDataToSwapSimulate(tradeData: ExSwapTradeData[]) {
-    //     const swaps: Array<TradeDetails> = []
-    //     const validTrades: Array<ExSwapTradeData> = []
-    //     const invalidTrades: Array<ExSwapTradeData> = []
-    //     let value = ethers.BigNumber.from(0)
-    //     for (let i = 0; i < tradeData.length; i++) {
-    //         const data = tradeData[i]
-    //         if (!data.value || !data.data || !data.exchangeData) {
-    //             invalidTrades.push(data)
-    //             this.emit("TradeDataError", tradeData)
-    //             continue
-    //         }
-    //         swaps.push({
-    //             'marketId': data.marketId,
-    //             'value': data.value,
-    //             'tradeData': data.data
-    //         })
-    //         validTrades.push(data)
-    //         value = value.add(data.value)
-    //     }
-    //     return {swaps, validTrades, invalidTrades, value: value.toString()}
-    // }
-    // public async batchBuyWithERC20s(swaps: Array<TradeDetails>) {
-    //     const value = getSwapsValue(swaps)
-    //     return this.swapExContract.batchBuyWithERC20s(swaps, {value})
-    // }
-
 
 }
 

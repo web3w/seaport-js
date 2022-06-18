@@ -1,2 +1,2 @@
 export {SwapEx} from './src/swapEx/swapEx'
-export {SeaportEx} from './src/seaportEx/seaportEx'
+export {SeaportSDK} from './src/index'
