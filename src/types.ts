@@ -33,6 +33,23 @@ export type {Signature, WalletInfo, LimitedCallSpec, EIP712TypedData, EIP712Doma
 
 export type {Asset, Token, APIConfig, ExchangeMetadata}
 
+export type SeaportConfig = {
+    // Used because fulfillments may be invalid if confirmations take too long. Default buffer is 5 minutes
+    ascendingAmountFulfillmentBuffer?: number;
+
+    // Allow users to optionally skip balance and approval checks on order creation
+    balanceAndApprovalChecksOnOrderCreation?: boolean;
+
+    // A mapping of conduit key to conduit
+    conduitKeyToConduit?: Record<string, string>;
+
+    overrides?: {
+        contractAddress?: string;
+        // A default conduit key to use when creating and fulfilling orders
+        defaultConduitKey?: string;
+    };
+};
+
 export type InputCriteria = {
     identifier: string;
     proof: string[];
@@ -149,6 +166,24 @@ export type CurrencyItem = {
 export type CreateInputItem = Erc721Item | Erc1155Item | CurrencyItem;
 export type TipInputItem = CreateInputItem & { recipient: string };
 
+export type ConsiderationInputItem = CreateInputItem & { recipient?: string };
+
+export type CreateOrderInput = {
+    conduitKey?: string;
+    zone?: string;
+    startTime?: string;
+    endTime?: string;
+    offer: readonly CreateInputItem[];
+    consideration: readonly ConsiderationInputItem[];
+    counter?: number;
+    fees?: readonly Fee[];
+    allowPartialFills?: boolean;
+    restrictedByZone?: boolean;
+    useProxy?: boolean;
+    salt?: string;
+};
+
+
 //--------- old ---------------------
 
 export interface OrdersQueryParams {
@@ -211,7 +246,6 @@ export type ExchangeAction<T = unknown> = {
     type: "exchange";
     transactionMethods: TransactionMethods<T>;
 };
-
 
 
 export type Fee = {

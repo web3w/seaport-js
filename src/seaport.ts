@@ -26,12 +26,12 @@ import {
     OrderParameters,
     OrderStatus,
     OrderType,
-    OrderWithCounter
+    OrderWithCounter, SeaportConfig
 } from "./types";
 import {
     EIP_712_ORDER_TYPE,
     EIP_712_PRIMARY_TYPE,
-    ItemType,
+    ItemType, KNOWN_CONDUIT_KEYS_TO_CONDUIT, NO_CONDUIT,
     SEAPORT_CONTRACT_NAME,
     SEAPORT_CONTRACT_VERSION
 } from "./constants";
@@ -55,6 +55,10 @@ export class Seaport extends EventEmitter {
     public conduitController: Contract
     public userAccount: Web3Accounts
     public GasWarpperToken: Token
+
+    private config: Required<Omit<SeaportConfig, "overrides">>;
+
+    private defaultConduitKey: string;
 
     constructor(wallet: WalletInfo, config?: APIConfig) {
         super()
@@ -91,6 +95,17 @@ export class Seaport extends EventEmitter {
         } else {
             throw `${this.walletInfo.chainId} abi undefined`
         }
+
+        this.config = {
+            ascendingAmountFulfillmentBuffer: 60 * 5, //5 minutes
+            balanceAndApprovalChecksOnOrderCreation: true,
+            conduitKeyToConduit: {
+                ...KNOWN_CONDUIT_KEYS_TO_CONDUIT,
+                [NO_CONDUIT]: this.seaport.address
+            },
+        };
+
+        this.defaultConduitKey = NO_CONDUIT;
     }
 
     async createSellOrder({
@@ -186,13 +201,10 @@ export class Seaport extends EventEmitter {
             ...orderParameters,
             counter,
         };
-
-        console.log(orderComponents)
-
         const {signature} = await this.userAccount.signTypedData({
             types: EIP_712_ORDER_TYPE,
             domain: domainData,
-            primaryType: "OrderComponents",
+            primaryType: EIP_712_PRIMARY_TYPE,
             message: orderComponents as EIP712Message
         });
         return signature
@@ -255,8 +267,7 @@ export class Seaport extends EventEmitter {
             startTime: sanitizedOrder.parameters.startTime,
             endTime: sanitizedOrder.parameters.endTime,
             currentBlockTimestamp,
-            ascendingAmountTimestampBuffer:
-                50000,
+            ascendingAmountTimestampBuffer: this.config.ascendingAmountFulfillmentBuffer
         };
         const totalNativeAmount = getSummedTokenAndIdentifierAmounts({
             items: considerationIncludingTips,
@@ -314,10 +325,8 @@ export class Seaport extends EventEmitter {
             startTime: sanitizedOrder.parameters.startTime,
             endTime: sanitizedOrder.parameters.endTime,
             currentBlockTimestamp,
-            ascendingAmountTimestampBuffer:
-                50000,
+            ascendingAmountTimestampBuffer: this.config.ascendingAmountFulfillmentBuffer
         };
-        //this.config.ascendingAmountFulfillmentBuffer,
 
 
         const additionalRecipients = forAdditionalRecipients.map(

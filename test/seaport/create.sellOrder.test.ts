@@ -25,7 +25,7 @@ const apiConfig = {
             privateKeys: secrets.privateKeys
         }, apiConfig[chainId])
         try {
-            const asset = (await sdk.getOwnerAssets({limit:2}))[1]
+            const asset = (await sdk.getOwnerAssets({limit: 2}))[1]
             const sellParams = {
                 "asset": {
                     "tokenId": asset.token_id,
@@ -39,10 +39,11 @@ const apiConfig = {
                 "startAmount": 0.02
             } as SellOrderParams
 
-            //fulfillAdvancedOrder (advancedOrder, criteriaResolvers, fulfillerConduitKey, recipient, payableOverrides)
+
             const order = await sdk.sea.createSellOrder(sellParams)
 
-            // const callData = await sdk.fulfillBasicOrder({order})
+            // const callData = await sdk.sea.fulfillBasicOrder({order})
+            //  //fulfillAdvancedOrder (advancedOrder, criteriaResolvers, fulfillerConduitKey, recipient, payableOverrides)
             const callData = await sdk.sea.fulfillAdvancedOrder({order})
             const tx = await sdk.sea.ethSend(transactionToCallData(callData))
             await tx.wait()

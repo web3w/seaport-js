@@ -167,6 +167,6 @@ console.assert(hash == structhash)
         address: buyer,
         privateKeys: secrets.privateKeys
     })
-    const orderHash = await sdk.sea.exchange.getOrderHash(order)
+    const orderHash = await sdk.sea.seaport.getOrderHash(order)
     console.assert(hash == orderHash)
 })()
