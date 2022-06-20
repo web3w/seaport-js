@@ -2,7 +2,7 @@ import EventEmitter from 'events'
 
 import {SEAPORT_CONTRACTS_ADDRESSES, SeaportABI,} from './contracts/index'
 
-import {APIConfig, NullToken, SellOrderParams, Token, Web3Accounts,} from 'web3-accounts'
+import {APIConfig, BuyOrderParams, NullToken, SellOrderParams, Token, Web3Accounts,} from 'web3-accounts'
 import {
     EIP712Message,
     ethSend,
@@ -41,14 +41,39 @@ import {
     validateAndSanitizeFromOrderStatus
 } from "./utils/fulfill";
 import {getSummedTokenAndIdentifierAmounts, isCriteriaItem, TimeBasedItemParams} from "./utils/item";
+import {parseUnits} from "@ethersproject/units/src.ts/index";
+
+// address: collection.transferFeeAddress,
+//     point: collection.elementSellerFeeBasisPoints
+export function computeFees(recipients: { address: string, points: number }[],
+                            tokenTotal: BigNumber,
+                            tokenAddress: string) {
+    let erc20TokenAmount = tokenTotal
+    // recipients = recipients.filter(val => val.point > 0)
+    const fees = recipients.map(val => {
+        const amount = tokenTotal.mul(val.points).div(10000)
+        erc20TokenAmount = erc20TokenAmount.sub(amount)
+        return {
+            itemType: tokenAddress == NULL_ADDRESS ? ItemType.NATIVE : ItemType.ERC20,
+            token: tokenAddress,
+            identifierOrCriteria: "0",
+            startAmount: amount.toString(),
+            endAmount: amount.toString(),
+            recipient: val.address
+        } as ConsiderationItem
+    })
+    return {fees, erc20TokenAmount}
+}
 
 export class Seaport extends EventEmitter {
     public walletInfo: WalletInfo
-    public protocolFeePoint = 250
+    public protocolFeePoints = 250
+
     // address
     public contractAddresses: any
     // public WETHAddr: string
     public feeRecipientAddress: string
+    public zoneAddress: string
     // contracts
     public seaport: Contract
     public conduit: Contract
@@ -63,8 +88,10 @@ export class Seaport extends EventEmitter {
     constructor(wallet: WalletInfo, config?: APIConfig) {
         super()
         const contracts = config?.contractAddresses || SEAPORT_CONTRACTS_ADDRESSES[wallet.chainId]
-        if (config?.protocolFeePoint) {
-            this.protocolFeePoint = config.protocolFeePoint
+        this.feeRecipientAddress = contracts.FeeRecipientAddress
+        if (config?.protocolFeePoints) {
+            this.protocolFeePoints = config.protocolFeePoints
+            this.feeRecipientAddress = config.protocolFeeAddress || contracts.FeeRecipientAddress
         }
         this.walletInfo = wallet
         const chainId = wallet.chainId
@@ -74,7 +101,11 @@ export class Seaport extends EventEmitter {
         const exchangeAddr = contracts.Exchange
         const conduitAddr = contracts.Conduit
         const conduitControllerAddr = contracts.ConduitController
-        const feeRecipientAddress = contracts.FeeRecipientAddress
+
+        this.zoneAddress = contracts.Zone
+
+        //https://rinkeby.etherscan.io/address/0x1E0049783F008A0085193E00003D00cd54003c71#code
+        //Approve asset Conduit
 
         this.contractAddresses = contracts
 
@@ -84,8 +115,6 @@ export class Seaport extends EventEmitter {
             address: contracts.GasToken,
             decimals: 18
         }
-        this.feeRecipientAddress = feeRecipientAddress
-
         this.userAccount = new Web3Accounts(wallet)
         const options = this.userAccount.signer
         if (exchangeAddr) {
@@ -108,6 +137,101 @@ export class Seaport extends EventEmitter {
         this.defaultConduitKey = NO_CONDUIT;
     }
 
+    async createBuyOrder({
+                             asset,
+                             quantity = 1,
+                             paymentToken = this.GasWarpperToken,
+                             expirationTime = 0,
+                             startAmount,
+                             protocolFeePoints,
+                             protocolFeeAddress
+                         }: BuyOrderParams): Promise<OrderWithCounter> {
+        const operator = this.conduit.address
+        const {
+            allowance,
+            calldata,
+            balances
+        } = await this.userAccount.getTokenApprove(paymentToken.address, operator);
+        const amount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+        if (amount.gt(balances)) {
+            throw 'CheckOrderMatch: buyer erc20Token  gt balances'
+        }
+        if (amount.gt(allowance)) {
+            const tx = await ethSend(this.walletInfo, calldata)
+            await tx.wait();
+            const info = await this.userAccount.getTokenApprove(amount.toString(), operator);
+            console.log("CheckOrderMatch WETH Token setApproved", info.balances);
+        }
+        const offerer = this.walletInfo.address
+        const zone = this.zoneAddress // ethers.constants.AddressZero
+        const orderType = OrderType.FULL_RESTRICTED
+        const startTime = 0
+        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7).toString()
+        const conduitKey = await this.conduitController.getKey(this.conduit.address)
+
+        const offer: OfferItem[] = [
+            {
+                itemType: ItemType.ERC20,
+                token: paymentToken.address,
+                identifierOrCriteria: "0",
+                startAmount: amount.toString(),
+                endAmount: amount.toString()
+            }
+        ]
+        const assetQut = quantity.toString()
+        const consideration: ConsiderationItem[] = [{
+            itemType: asset.schemaName.toLowerCase() == "erc721" ? ItemType.ERC721 : ItemType.ERC1155,
+            token: asset.tokenAddress,
+            identifierOrCriteria: asset?.tokenId?.toString() || "1",
+            startAmount: assetQut,
+            endAmount: assetQut,
+            recipient: this.walletInfo.address
+        }]
+
+        let recipients: { address: string, points: number }[] = []
+        protocolFeePoints = protocolFeePoints || this.protocolFeePoints
+        if (protocolFeePoints != 0) {
+            recipients.push({
+                address: protocolFeeAddress || this.feeRecipientAddress,
+                points: protocolFeePoints
+            })
+        }
+
+        const collection = asset.collection
+        if (collection && collection.royaltyFeePoints) {
+            if (!collection.royaltyFeeAddress) throw "Inroyalties greater than 0 The address cannot be empty!"
+            recipients.push({
+                address: collection.royaltyFeeAddress,
+                points: collection.royaltyFeePoints
+            })
+        }
+        const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+        const {fees} = computeFees(recipients, start, paymentToken.address)
+        consideration.push(...fees)
+        const orderParameters: OrderParameters = {
+            offerer,
+            zone,
+            orderType,
+            startTime,
+            endTime,
+            zoneHash: NULL_BLOCK_HASH,
+            salt: ethers.BigNumber.from(Date.now()).toString(),
+            offer,
+            consideration,
+            totalOriginalConsiderationItems: consideration.length.toString(),
+            conduitKey
+        }
+        const resolvedCounter = (await this.seaport.getCounter(this.walletInfo.address)).toNumber()
+        // console.log(counter.toNumber())
+
+        const signature = await this.signOrder(orderParameters, resolvedCounter)
+
+        return {
+            parameters: {...orderParameters, counter: resolvedCounter},
+            signature,
+        };
+    }
+
     async createSellOrder({
                               asset,
                               quantity = 1,
@@ -115,7 +239,9 @@ export class Seaport extends EventEmitter {
                               listingTime = 0,
                               expirationTime = 0,
                               startAmount,
-                              endAmount
+                              endAmount,
+                              protocolFeePoints,
+                              protocolFeeAddress
                           }: SellOrderParams): Promise<OrderWithCounter> {
         const operator = this.conduit.address
         const assetApprove = await this.userAccount.getAssetApprove(asset, operator)
@@ -128,10 +254,10 @@ export class Seaport extends EventEmitter {
             console.log("Approve Asset", tx.hash)
         }
         const offerer = this.walletInfo.address
-        const zone = ethers.constants.AddressZero
+        const zone = this.zoneAddress // ethers.constants.AddressZero
         const orderType = OrderType.FULL_RESTRICTED
         const startTime = listingTime || Math.round(Date.now() / 1000).toString()
-        const endTime = expirationTime || Math.round(Date.now()).toString()
+        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7).toString()
         const conduitKey = await this.conduitController.getKey(this.conduit.address)
         const assetAmount = quantity.toString()
         const offer: OfferItem[] = [
@@ -143,19 +269,34 @@ export class Seaport extends EventEmitter {
                 endAmount: assetAmount
             }
         ]
-        const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals).toString()
-        const end = ethers.utils.parseUnits((endAmount || startAmount).toString(), paymentToken.decimals).toString()
-        // fee..
-        const consideration: ConsiderationItem[] = [
-            {
-                itemType: paymentToken.address == NULL_ADDRESS ? ItemType.NATIVE : ItemType.ERC20,
-                token: paymentToken.address,
-                identifierOrCriteria: "0",
-                startAmount: start,
-                endAmount: end,
-                recipient: offerer
-            }
-        ]
+
+        let recipients: { address: string, points: number }[] = []
+        protocolFeePoints = protocolFeePoints || this.protocolFeePoints
+        if (protocolFeePoints != 0) {
+            recipients.push({
+                address: protocolFeeAddress || this.feeRecipientAddress,
+                points: protocolFeePoints
+            })
+        }
+
+        const collection = asset.collection
+        if (collection && collection.royaltyFeePoints) {
+            if (!collection.royaltyFeeAddress) throw "Inroyalties greater than 0 The address cannot be empty!"
+            recipients.push({
+                address: collection.royaltyFeeAddress,
+                points: collection.royaltyFeePoints
+            })
+        }
+        const payPoints = recipients.map(val => Number(val.points)).reduce((cur, next) => cur + next)
+
+        recipients.unshift({
+            address: this.walletInfo.address,
+            points: 10000 - payPoints
+        })
+
+        const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+        // const end = ethers.utils.parseUnits((endAmount || startAmount).toString(), paymentToken.decimals).toString()
+        const {fees: consideration} = computeFees(recipients, start, paymentToken.address)
         const orderParameters: OrderParameters = {
             offerer,
             zone,
@@ -163,7 +304,7 @@ export class Seaport extends EventEmitter {
             startTime,
             endTime,
             zoneHash: NULL_BLOCK_HASH,
-            salt: ethers.utils.hexValue(Date.now()),
+            salt: ethers.BigNumber.from(Date.now()).toString(),
             offer,
             consideration,
             totalOriginalConsiderationItems: consideration.length.toString(),

@@ -1,6 +1,6 @@
 import EventEmitter from 'events'
 import {Seaport} from "./seaport";
-import {OpenseaAPI} from "./api/opensea";
+import {SeaportAPI} from "./api/seaport";
 import {SwapEx} from "./swapEx/swapEx";
 
 import {
@@ -19,7 +19,7 @@ export class SeaportSDK extends EventEmitter {
     public walletInfo: WalletInfo
     public sea: Seaport
     public swap: SwapEx
-    public api: OpenseaAPI
+    public api: SeaportAPI
     public user: Web3Accounts
 
     constructor(wallet: WalletInfo, config?: APIConfig) {
@@ -30,7 +30,7 @@ export class SeaportSDK extends EventEmitter {
             conf = {...conf, ...config}
         }
         this.sea = new Seaport(wallet, conf)
-        this.api = new OpenseaAPI(conf)
+        this.api = new SeaportAPI(conf)
         this.swap = new SwapEx(wallet)
         this.user = new Web3Accounts(wallet)
         this.walletInfo = wallet
@@ -72,8 +72,8 @@ export class SeaportSDK extends EventEmitter {
         const assets: AssetCollection[] = await this.api.getAssets(tokens)
         return assets.map(val => (<FeesInfo>{
             royaltyFeeAddress: val.royaltyFeeAddress,
-            royaltyFeePoint: val.royaltyFeePoint,
-            protocolFeePoint: val.protocolFeePoint,
+            royaltyFeePoints: val.royaltyFeePoints,
+            protocolFeePoints: val.protocolFeePoints,
             protocolFeeAddress: this.sea.feeRecipientAddress
         }))
     }

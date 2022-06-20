@@ -90,17 +90,17 @@ export type ConsiderationItem = {
 export type Item = OfferItem | ConsiderationItem;
 
 export type OrderParameters = {
-    offerer: string;
-    zone: string;
-    orderType: OrderType;
-    startTime: BigNumberish;
-    endTime: BigNumberish;
-    zoneHash: string;
-    salt: string;
-    offer: OfferItem[];
-    consideration: ConsiderationItem[];
-    totalOriginalConsiderationItems: BigNumberish;
-    conduitKey: string;
+    offerer: string
+    offer: OfferItem[]
+    consideration: ConsiderationItem[]
+    startTime: BigNumberish
+    endTime: BigNumberish
+    orderType: OrderType
+    zone: string
+    zoneHash: string
+    salt: string
+    conduitKey: string
+    totalOriginalConsiderationItems: BigNumberish
 };
 
 export type OrderComponents = OrderParameters & { counter: number };
@@ -212,8 +212,8 @@ export interface AssetsQueryParams {
 
 export interface FeesInfo {
     royaltyFeeAddress: string
-    royaltyFeePoint: number
-    protocolFeePoint?: number
+    royaltyFeePoints: number
+    protocolFeePoints?: number
     protocolFeeAddress?: string
 }
 

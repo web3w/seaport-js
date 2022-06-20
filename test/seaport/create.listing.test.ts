@@ -1,6 +1,7 @@
 import * as secrets from '../../../secrets.json'
 import {ETHToken, SellOrderParams, transactionToCallData} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";
+import json = Mocha.reporters.json;
 
 const buyer = '0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401'
 
@@ -9,12 +10,12 @@ const apiConfig = {
         1: {
             proxyUrl: 'http://127.0.0.1:7890',
             apiTimeout: 10200,
-            protocolFeePoint: 250
+            protocolFeePoints: 250
         },
         4: {
             proxyUrl: 'http://127.0.0.1:7890',
             apiTimeout: 10200,
-            protocolFeePoint: 250
+            protocolFeePoints: 250
         }
     }
 
@@ -32,7 +33,7 @@ const apiConfig = {
                     "tokenAddress": asset.address,
                     "schemaName": asset.schema_name,
                     "collection": {
-                        "royaltyFeePoint": asset.royaltyFeePoint,
+                        "royaltyFeePoints": asset.royaltyFeePoints,
                         "royaltyFeeAddress": asset.royaltyFeeAddress
                     }
                 },
@@ -41,6 +42,10 @@ const apiConfig = {
 
 
             const order = await sdk.sea.createSellOrder(sellParams)
+
+            console.log(order)
+
+            const res = await sdk.api.postOrder(JSON.stringify(order))
 
             // const callData = await sdk.sea.fulfillBasicOrder({order})
             //  //fulfillAdvancedOrder (advancedOrder, criteriaResolvers, fulfillerConduitKey, recipient, payableOverrides)

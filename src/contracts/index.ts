@@ -25,6 +25,7 @@ export const SEAPORT_CONTRACTS_ADDRESSES = {
         Exchange: "0x00000000006c3852cbef3e08e8df289169ede581",
         ConduitController: "0x00000000F9490004C11Cef243f5400493c00Ad63",
         Conduit: "0x1e0049783f008a0085193e00003d00cd54003c71",
+        Zone: "0x00000000E88FE2628EbC5DA81d2b3CeaD633E89e",
         PausableZone: "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
         FeeRecipientAddress: '0x5b3256965e7c3cf26e11fcaf296dfc8807c01073',
         GasToken: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
@@ -33,8 +34,9 @@ export const SEAPORT_CONTRACTS_ADDRESSES = {
         Exchange: "0x00000000006c3852cbef3e08e8df289169ede581",
         ConduitController: "0x00000000F9490004C11Cef243f5400493c00Ad63",
         Conduit: "0x1e0049783f008a0085193e00003d00cd54003c71",
+        Zone: "0x00000000E88FE2628EbC5DA81d2b3CeaD633E89e",
         PausableZone: "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
-        FeeRecipientAddress: '0x5b3256965e7c3cf26e11fcaf296dfc8807c01073',
+        FeeRecipientAddress: '0x8De9C5A032463C561423387a9648c5C7BCC5BC90',
         GasToken: '0xc778417e063141139fce010982780140aa0cd5ab',
     }
 }
