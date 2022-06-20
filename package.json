@@ -22,7 +22,7 @@
     "merkletreejs": "^0.2.31",
     "query-string": "^7.1.1",
     "web3-abi-coder": "^1.1.2",
-    "web3-accounts": "1.2.0",
+    "web3-accounts": "1.2.1",
     "web3-wallets": "^2.1.1"
   },
   "devDependencies": {

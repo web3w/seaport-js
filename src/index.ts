@@ -5,19 +5,19 @@ import {SwapEx} from "./swapEx/swapEx";
 
 import {
     Asset,
-    APIConfig, Web3Accounts
+    APIConfig, Web3Accounts, ExchangetAgent, OrderSide, CreateOrderParams, MatchParams, SellOrderParams, BuyOrderParams
 } from "web3-accounts"
 
 import {
     WalletInfo,
     AssetsQueryParams,
     AssetCollection,
-    FeesInfo
+    FeesInfo,
 } from "./types"
 
-export class SeaportSDK extends EventEmitter {
+export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     public walletInfo: WalletInfo
-    public sea: Seaport
+    public contracts: Seaport
     public swap: SwapEx
     public api: SeaportAPI
     public user: Web3Accounts
@@ -29,11 +29,40 @@ export class SeaportSDK extends EventEmitter {
         if (config) {
             conf = {...conf, ...config}
         }
-        this.sea = new Seaport(wallet, conf)
+        this.contracts = new Seaport(wallet, conf)
         this.api = new SeaportAPI(conf)
         this.swap = new SwapEx(wallet)
         this.user = new Web3Accounts(wallet)
         this.walletInfo = wallet
+    }
+
+    async getOrderApprove(params: CreateOrderParams, side: OrderSide) {
+        return this.contracts.getOrderApprove(params, side)
+    }
+
+    async getMatchCallData(params: MatchParams): Promise<any> {
+        return this.contracts.getMatchCallData(params)
+    }
+
+    async createSellOrder(params: SellOrderParams): Promise<any> {
+        return this.contracts.createSellOrder(params)
+    }
+
+    async createBuyOrder(params: BuyOrderParams): Promise<any> {
+        return this.contracts.createBuyOrder(params)
+    }
+
+    async matchOrder(orderStr: string) {
+        return this.contracts.fulfillOrder(orderStr)
+    }
+
+    async fulfillOrder(orderStr: string) {
+        return this.contracts.fulfillOrder(orderStr)
+    }
+
+    async cancelOrders(orders: string[]) {
+
+        return this.contracts.cancelOrders(orders.map(val => JSON.parse(val)))
     }
 
     async getAssetBalances(asset: Asset, account?: string): Promise<string> {
@@ -74,7 +103,7 @@ export class SeaportSDK extends EventEmitter {
             royaltyFeeAddress: val.royaltyFeeAddress,
             royaltyFeePoints: val.royaltyFeePoints,
             protocolFeePoints: val.protocolFeePoints,
-            protocolFeeAddress: this.sea.feeRecipientAddress
+            protocolFeeAddress: this.contracts.feeRecipientAddress
         }))
     }
 

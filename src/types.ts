@@ -100,7 +100,6 @@ export type OrderParameters = {
     zoneHash: string
     salt: string
     conduitKey: string
-    totalOriginalConsiderationItems: BigNumberish
 };
 
 export type OrderComponents = OrderParameters & { counter: number };

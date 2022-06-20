@@ -1,5 +1,5 @@
 import * as secrets from '../../../secrets.json'
-import {ETHToken, SellOrderParams, transactionToCallData} from "web3-accounts";
+import {BuyOrderParams, ETHToken, SellOrderParams, transactionToCallData} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";
 
 const buyer = '0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401'
@@ -9,25 +9,26 @@ const chainId = 4
 const apiConfig = {
         1: {
             proxyUrl: 'http://127.0.0.1:7890',
-            apiTimeout: 10200,
+            apiTimeout: 20000,
             protocolFeePoints: 250
         },
         4: {
             proxyUrl: 'http://127.0.0.1:7890',
-            apiTimeout: 10200,
+            apiTimeout: 20000,
             protocolFeePoints: 250
         }
     }
 
 ;(async () => {
+    //, apiConfig[chainId]
         const sdk = new SeaportSDK({
             chainId,
             address: buyer,
             privateKeys: secrets.privateKeys
-        }, apiConfig[chainId])
+        })
         try {
             const asset = (await sdk.getOwnerAssets({limit: 2}))[1]
-            const sellParams = {
+            const buyParams = {
                 "asset": {
                     "tokenId": asset.token_id,
                     "tokenAddress": asset.address,
@@ -38,16 +39,13 @@ const apiConfig = {
                     }
                 },
                 "startAmount": 0.02
-            } as SellOrderParams
+            } as BuyOrderParams
 
-            const order = await sdk.sea.createSellOrder(sellParams)
-            console.log(order)
-            const res = await sdk.api.postOrder(JSON.stringify(order))
+            const order = await sdk.createBuyOrder(buyParams)
+            // console.log(order)
+            // const res = await sdk.api.postOrder(JSON.stringify(order))
 
-            // const callData = await sdk.sea.fulfillBasicOrder({order})
-            //  //fulfillAdvancedOrder (advancedOrder, criteriaResolvers, fulfillerConduitKey, recipient, payableOverrides)
-            const callData = await sdk.sea.fulfillAdvancedOrder({order})
-            const tx = await sdk.sea.ethSend(transactionToCallData(callData))
+            const tx = await sdk.fulfillOrder(JSON.stringify(order))
             await tx.wait()
             console.log(tx.hash)
 

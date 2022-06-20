@@ -5,7 +5,7 @@ import {
     OrdersQueryParams,
     AssetsQueryParams,
     APIConfig,
-    Order, OrderParameters, OfferItem, ConsiderationItem
+    Order, OrderParameters, OfferItem, ConsiderationItem, NULL_ADDRESS
 } from "../types";
 
 import {OPENSEA_API_TIMEOUT, OPENSEA_API_CONFIG, OPENSEA_API_KEY, CHAIN_PATH} from "./config";
@@ -122,8 +122,8 @@ export class SeaportAPI extends BaseFetch {
             : QueryString.stringify(query)
 
         try {
-            //https://api-test.element.market/bridge/opensea/api/v1/assets?
-            // const json = await this.getQueryString('/api/v1/assets', queryUrl)
+            //https://testnets-api.opensea.io/api/v1/assets?include_orders=false&limit=1&owner=0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401
+            console.log("getAssets", `${this.apiBaseUrl}/api/v1/assets?${queryUrl}`)
             const json = await this.getQueryString('/api/v1/assets', queryUrl)
 
             // json.assets.collection.dev_seller_fee_basis_points
@@ -178,9 +178,10 @@ export class SeaportAPI extends BaseFetch {
         }
     }
 
+
     public async postOrder(orderStr: string, retries = 2): Promise<any> {
         const {parameters, signature} = JSON.parse(orderStr)
-        const order_parameters = converToPost(parameters)
+        const order_parameters =  converToPost(parameters)
         // assert.doesConformToSchema('PostOrder', singSellOrder, schemas.orderSchema)
         try {
             const opts = {
@@ -191,7 +192,7 @@ export class SeaportAPI extends BaseFetch {
 
             // itemType = 1 ERC20  "itemType" = 2, ERC721..
             const offer = parameters.offer[0]
-            const orderSide =offer.itemType == 1 && offer.identifierOrCriteria=="0" ? 'offers' : 'listings'
+            const orderSide = offer.itemType == 1 && offer.identifierOrCriteria == "0" ? 'offers' : 'listings'
 
             // const orderSide = side == OrderSide.Buy ? 'offers' : 'listings'
             const apiPath = `/v2/orders/${this.chainPath}/seaport/${orderSide}`
@@ -217,17 +218,49 @@ export class SeaportAPI extends BaseFetch {
 
 }
 
-//
-// const opts = {
-//     headers: {
-//         'X-API-KEY': this.apiKey || OPENSEA_API_KEY
-//     }
-// }
-// const result = await this.post(
-//     `${ORDERS_PATH}/orders/post`,
-//     singSellOrder,
-//     opts
-// ).catch((e: any) => {
-//     console.log(e)
-//     throw e
-// })
+const order11 ={
+    offerer: '0x32f4B63A46c1D12AD82cABC778D75aBF9889821a',
+        zone: '0x00000000E88FE2628EbC5DA81d2b3CeaD633E89e',
+    zone_hash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    start_time: 0,
+    end_time: 1656358473,
+    order_type: 2,
+    salt: '1655753675193',
+    conduitKey: '0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000',
+    nonce: '0',
+    offer: [
+    {
+        item_type: 2,
+        token: '0x984ac9911c6839a6870a1040a5fb89dd66513bc5',
+        identifier_or_criteria: '6136',
+        startAmount: 1,
+        endAmount: 1
+    }
+],
+    consideration: [
+    {
+        item_type: 0,
+        token: '0x0000000000000000000000000000000000000000',
+        identifier_or_criteria: '0',
+        startAmount: 462500000000000000,
+        endAmount: 462500000000000000,
+        recipient: '0x32f4B63A46c1D12AD82cABC778D75aBF9889821a'
+    },
+    {
+        item_type: 0,
+        token: '0x0000000000000000000000000000000000000000',
+        identifier_or_criteria: '0',
+        startAmount: 12500000000000000,
+        endAmount: 12500000000000000,
+        recipient: '0x8De9C5A032463C561423387a9648c5C7BCC5BC90'
+    },
+    {
+        item_type: 0,
+        token: '0x0000000000000000000000000000000000000000',
+        identifier_or_criteria: '0',
+        startAmount: 25000000000000000,
+        endAmount: 25000000000000000,
+        recipient: '0x545ed214984f3ec57fb6a614f2a6211f0481547f'
+    }
+]
+}

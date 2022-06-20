@@ -27,14 +27,14 @@ const apiConfig = {
             {chainId, address, privateKeys: secrets.privateKeys},
             apiConfig[chainId])
         try {
-            // const query = {
-            //     asset_contract_address: '0x5fecbbbaf9f3126043a48a35eb2eb8667d469d53', //
-            //     token_ids: ['8001'],
-            //     side:OrderSide.Sell
-            //
-            // } as OrdersQueryParams
-            // const {orders} = await api.getOrders(query)
-            // console.log(orders)
+            const query = {
+                asset_contract_address: '0x5fecbbbaf9f3126043a48a35eb2eb8667d469d53', //
+                token_ids: ['8001'],
+                side:OrderSide.Sell
+
+            }
+            const {orders} = await sdk.api.getOrders(query)
+            console.log(orders)
 
             // "token": "0x5FecBbBAf9f3126043A48A35eb2eb8667D469D53",
             //                     "identifierOrCriteria": "8001",

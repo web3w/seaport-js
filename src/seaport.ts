@@ -2,49 +2,54 @@ import EventEmitter from 'events'
 
 import {SEAPORT_CONTRACTS_ADDRESSES, SeaportABI,} from './contracts/index'
 
-import {APIConfig, BuyOrderParams, NullToken, SellOrderParams, Token, Web3Accounts,} from 'web3-accounts'
+import {
+    APIConfig,
+    BuyOrderParams,
+    CreateOrderParams,
+    MatchParams,
+    NullToken,
+    OrderSide,
+    SellOrderParams,
+    Token, transactionToCallData,
+    Web3Accounts,
+} from 'web3-accounts'
 import {
     EIP712Message,
     ethSend,
-    LimitedCallSpec,
-    NULL_BLOCK_HASH,
-    WalletInfo,
-    NULL_ADDRESS,
     getChainRpcUrl,
-    getEstimateGas, getEIP712StructHash
+    getEIP712StructHash,
+    getEstimateGas,
+    LimitedCallSpec,
+    NULL_ADDRESS,
+    NULL_BLOCK_HASH,
+    WalletInfo
 } from "web3-wallets"
 
 import {BigNumber, Contract, ethers} from "ethers";
 import {
-    BasicOrderRouteType,
     ConsiderationItem,
-    InputCriteria,
-    Item,
     OfferItem,
     Order,
     OrderComponents,
     OrderParameters,
     OrderStatus,
     OrderType,
-    OrderWithCounter, SeaportConfig
+    OrderWithCounter,
+    SeaportConfig
 } from "./types";
 import {
     EIP_712_ORDER_TYPE,
     EIP_712_PRIMARY_TYPE,
-    ItemType, KNOWN_CONDUIT_KEYS_TO_CONDUIT, NO_CONDUIT,
+    ItemType,
+    KNOWN_CONDUIT_KEYS_TO_CONDUIT,
+    NO_CONDUIT,
     SEAPORT_CONTRACT_NAME,
     SEAPORT_CONTRACT_VERSION
 } from "./constants";
 import {generateCriteriaResolvers} from "./utils/criteria";
-import {
-    offerAndConsiderationFulfillmentMapping,
-    validateAndSanitizeFromOrderStatus
-} from "./utils/fulfill";
+import {offerAndConsiderationFulfillmentMapping, validateAndSanitizeFromOrderStatus} from "./utils/fulfill";
 import {getSummedTokenAndIdentifierAmounts, isCriteriaItem, TimeBasedItemParams} from "./utils/item";
-import {parseUnits} from "@ethersproject/units/src.ts/index";
 
-// address: collection.transferFeeAddress,
-//     point: collection.elementSellerFeeBasisPoints
 export function computeFees(recipients: { address: string, points: number }[],
                             tokenTotal: BigNumber,
                             tokenAddress: string) {
@@ -65,6 +70,10 @@ export function computeFees(recipients: { address: string, points: number }[],
     return {fees, erc20TokenAmount}
 }
 
+export const generateRandomSalt = () => {
+    return ethers.BigNumber.from(ethers.utils.randomBytes(7)).toString();
+};
+
 export class Seaport extends EventEmitter {
     public walletInfo: WalletInfo
     public protocolFeePoints = 250
@@ -74,6 +83,7 @@ export class Seaport extends EventEmitter {
     // public WETHAddr: string
     public feeRecipientAddress: string
     public zoneAddress: string
+    public pausableZoneAddress: string
     // contracts
     public seaport: Contract
     public conduit: Contract
@@ -103,6 +113,7 @@ export class Seaport extends EventEmitter {
         const conduitControllerAddr = contracts.ConduitController
 
         this.zoneAddress = contracts.Zone
+        this.pausableZoneAddress = contracts.PausableZone
 
         //https://rinkeby.etherscan.io/address/0x1E0049783F008A0085193E00003D00cd54003c71#code
         //Approve asset Conduit
@@ -137,6 +148,90 @@ export class Seaport extends EventEmitter {
         this.defaultConduitKey = NO_CONDUIT;
     }
 
+    async getOrderApprove({
+                              asset,
+                              quantity = 1,
+                              paymentToken = NullToken,
+                              startAmount,
+                          }: CreateOrderParams, side: OrderSide) {
+        const operator = this.conduit.address
+        const decimals: number = paymentToken ? paymentToken.decimals : 18
+        if (side == OrderSide.Sell) {
+            const assetApprove = await this.userAccount.getAssetApprove(asset, operator)
+            if (Number(assetApprove.balances) < Number(quantity)) {
+                throw 'Seller asset is not enough'
+            }
+            return assetApprove
+            // if (!assetApprove.isApprove && assetApprove.calldata) {
+            //     const tx = await ethSend(this.walletInfo, assetApprove.calldata)
+            //     await tx.wait()
+            //     console.log("Approve Asset", tx.hash)
+            // }
+
+
+        } else {
+            const {
+                allowance,
+                calldata,
+                balances
+            } = await this.userAccount.getTokenApprove(paymentToken.address, operator);
+            const amount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+            if (amount.gt(balances)) {
+                throw 'CheckOrderMatch: buyer erc20Token  gt balances'
+            }
+            const spend = ethers.utils.parseUnits(startAmount.toString(), decimals)
+            return {
+                isApprove: spend.lt(allowance),
+                balances,
+                calldata: spend.lt(allowance) ? undefined : calldata
+            }
+            // if (amount.gt(allowance)) {
+            //     const tx = await ethSend(this.walletInfo, calldata)
+            //     await tx.wait();
+            //     const info = await this.userAccount.getTokenApprove(amount.toString(), operator);
+            //     console.log("CheckOrderMatch WETH Token setApproved", info.balances);
+            // }
+
+
+        }
+
+    }
+
+    private async createOrder(offer: OfferItem[], consideration: ConsiderationItem[], expirationTime) {
+        const offerer = this.walletInfo.address
+
+        const orderType = OrderType.FULL_RESTRICTED
+        const startTime = Math.round(Date.now() / 1000).toString()
+        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7).toString()
+        const conduitKey = await this.conduitController.getKey(this.conduit.address)
+
+        let zone = this.pausableZoneAddress // ethers.constants.AddressZero
+        if (offer[0].itemType == ItemType.ERC20) {
+            zone = this.zoneAddress
+        }
+
+        const orderParameters: OrderParameters = {
+            offerer,
+            zone,
+            orderType,
+            startTime,
+            endTime,
+            zoneHash: NULL_BLOCK_HASH,
+            salt: generateRandomSalt(),
+            offer,
+            consideration,
+            conduitKey
+        }
+        const resolvedCounter = (await this.seaport.getCounter(this.walletInfo.address)).toNumber()
+
+        const signature = await this.signOrder(orderParameters, resolvedCounter)
+
+        return {
+            parameters: {...orderParameters, counter: resolvedCounter},
+            signature,
+        };
+    }
+
     async createBuyOrder({
                              asset,
                              quantity = 1,
@@ -146,29 +241,23 @@ export class Seaport extends EventEmitter {
                              protocolFeePoints,
                              protocolFeeAddress
                          }: BuyOrderParams): Promise<OrderWithCounter> {
-        const operator = this.conduit.address
-        const {
-            allowance,
-            calldata,
-            balances
-        } = await this.userAccount.getTokenApprove(paymentToken.address, operator);
-        const amount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
-        if (amount.gt(balances)) {
-            throw 'CheckOrderMatch: buyer erc20Token  gt balances'
-        }
-        if (amount.gt(allowance)) {
+
+        const {isApprove, calldata, balances} = await this.getOrderApprove({
+            asset,
+            quantity,
+            paymentToken,
+            expirationTime,
+            startAmount,
+        }, OrderSide.Buy)
+
+        if (!isApprove && calldata) {
             const tx = await ethSend(this.walletInfo, calldata)
             await tx.wait();
-            const info = await this.userAccount.getTokenApprove(amount.toString(), operator);
-            console.log("CheckOrderMatch WETH Token setApproved", info.balances);
+            console.log("CreateBuyOrder Token setApproved", balances);
         }
-        const offerer = this.walletInfo.address
-        const zone = this.zoneAddress // ethers.constants.AddressZero
-        const orderType = OrderType.FULL_RESTRICTED
-        const startTime = 0
-        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7).toString()
-        const conduitKey = await this.conduitController.getKey(this.conduit.address)
 
+        const amount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+        console.log("createBuyOrder", amount.toString())
         const offer: OfferItem[] = [
             {
                 itemType: ItemType.ERC20,
@@ -208,28 +297,9 @@ export class Seaport extends EventEmitter {
         const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
         const {fees} = computeFees(recipients, start, paymentToken.address)
         consideration.push(...fees)
-        const orderParameters: OrderParameters = {
-            offerer,
-            zone,
-            orderType,
-            startTime,
-            endTime,
-            zoneHash: NULL_BLOCK_HASH,
-            salt: ethers.BigNumber.from(Date.now()).toString(),
-            offer,
-            consideration,
-            totalOriginalConsiderationItems: consideration.length.toString(),
-            conduitKey
-        }
-        const resolvedCounter = (await this.seaport.getCounter(this.walletInfo.address)).toNumber()
-        // console.log(counter.toNumber())
 
-        const signature = await this.signOrder(orderParameters, resolvedCounter)
+        return this.createOrder(offer, consideration, expirationTime)
 
-        return {
-            parameters: {...orderParameters, counter: resolvedCounter},
-            signature,
-        };
     }
 
     async createSellOrder({
@@ -243,22 +313,21 @@ export class Seaport extends EventEmitter {
                               protocolFeePoints,
                               protocolFeeAddress
                           }: SellOrderParams): Promise<OrderWithCounter> {
-        const operator = this.conduit.address
-        const assetApprove = await this.userAccount.getAssetApprove(asset, operator)
-        if (assetApprove.balances == '0') {
-            throw 'Seller asset balance 0'
+
+        const {isApprove, calldata, balances} = await this.getOrderApprove({
+            asset,
+            quantity,
+            paymentToken,
+            expirationTime,
+            startAmount,
+        }, OrderSide.Sell)
+
+        if (!isApprove && calldata) {
+            const tx = await ethSend(this.walletInfo, calldata)
+            await tx.wait();
+            console.log("CreateSellOrder Token setApproved", balances);
         }
-        if (!assetApprove.isApprove && assetApprove.calldata) {
-            const tx = await ethSend(this.walletInfo, assetApprove.calldata)
-            await tx.wait()
-            console.log("Approve Asset", tx.hash)
-        }
-        const offerer = this.walletInfo.address
-        const zone = this.zoneAddress // ethers.constants.AddressZero
-        const orderType = OrderType.FULL_RESTRICTED
-        const startTime = listingTime || Math.round(Date.now() / 1000).toString()
-        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7).toString()
-        const conduitKey = await this.conduitController.getKey(this.conduit.address)
+
         const assetAmount = quantity.toString()
         const offer: OfferItem[] = [
             {
@@ -297,28 +366,7 @@ export class Seaport extends EventEmitter {
         const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
         // const end = ethers.utils.parseUnits((endAmount || startAmount).toString(), paymentToken.decimals).toString()
         const {fees: consideration} = computeFees(recipients, start, paymentToken.address)
-        const orderParameters: OrderParameters = {
-            offerer,
-            zone,
-            orderType,
-            startTime,
-            endTime,
-            zoneHash: NULL_BLOCK_HASH,
-            salt: ethers.BigNumber.from(Date.now()).toString(),
-            offer,
-            consideration,
-            totalOriginalConsiderationItems: consideration.length.toString(),
-            conduitKey
-        }
-        const resolvedCounter = (await this.seaport.getCounter(this.walletInfo.address)).toNumber()
-        // console.log(counter.toNumber())
-
-        const signature = await this.signOrder(orderParameters, resolvedCounter)
-
-        return {
-            parameters: {...orderParameters, counter: resolvedCounter},
-            signature,
-        };
+        return this.createOrder(offer, consideration, expirationTime)
     }
 
     /**
@@ -351,7 +399,40 @@ export class Seaport extends EventEmitter {
         return signature
     }
 
-    //fulfillStandardOrder
+    async getMatchCallData(params: MatchParams) {
+        const {orderStr, takerAmount} = params
+        if (takerAmount) {
+            return this.fulfillAdvancedOrder({order: JSON.parse(orderStr)})
+        } else {
+            return this.fulfillBasicOrder({order: JSON.parse(orderStr)})
+        }
+    }
+
+    public async fulfillOrder(orderStr: string) {
+        // await this.checkMatchOrder(orderStr)
+        const callData = await this.getMatchCallData({orderStr})
+        // console.assert(sell.exchange.toLowerCase() == this.seaport.address.toLowerCase(), 'AcceptOrder error')
+        return this.ethSend(transactionToCallData(callData))
+    }
+
+    public async checkOrderPost(orderStr: string, taker: string = NULL_ADDRESS) {
+        const {parameters, signature} = JSON.parse(orderStr)
+        const operator = this.conduit.address
+        const {offer} = parameters
+        const offerAsset = offer[0]
+        if (offerAsset.itemType == ItemType.ERC20) {
+            const {balances, allowance} = await this.userAccount.getTokenApprove(offerAsset.token, operator)
+            console.log(balances, allowance)
+        } else {
+            const {isApprove, balances} = await this.userAccount.getAssetApprove({
+                tokenAddress: offerAsset.token,
+                tokenId: offerAsset.identifierOrCriteria,
+                schemaName: offerAsset.itemType == ItemType.ERC721 ? "ERC721" : "ERC115"
+            }, operator)
+            console.log(isApprove, balances)
+        }
+    }
+
     async fulfillAdvancedOrder({
                                    order,
                                    tips = [],
@@ -366,8 +447,7 @@ export class Seaport extends EventEmitter {
             ...order,
             parameters: {
                 ...order.parameters,
-                consideration: [...order.parameters.consideration, ...tips],
-                totalOriginalConsiderationItems: consideration.length,
+                consideration: [...order.parameters.consideration, ...tips]
             },
         };
         //1.advancedOrder:AdvancedOrder

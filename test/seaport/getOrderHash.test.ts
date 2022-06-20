@@ -153,7 +153,6 @@ const order = {
             "recipient": "0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401"
         }
     ],
-    "totalOriginalConsiderationItems": "1",
     "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
     "counter": 0
 }
@@ -163,10 +162,10 @@ console.assert(hash == "0xa1dc54ca93f82077855645df0a030fd8c242a13cd4e0c29682ab88
 console.assert(hash == structhash)
 ;(async () => {
     const sdk = new SeaportSDK({
-        chainId: 4,
+        chainId: 1,
         address: buyer,
         privateKeys: secrets.privateKeys
     })
-    const orderHash = await sdk.sea.seaport.getOrderHash(order)
+    const orderHash = await sdk.contracts.seaport.getOrderHash(order)
     console.assert(hash == orderHash)
 })()
