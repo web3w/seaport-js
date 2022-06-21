@@ -1,6 +1,8 @@
 import * as secrets from '../../../secrets.json'
 import {BuyOrderParams, ETHToken, SellOrderParams, transactionToCallData} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";
+import {validateOrderWithCounter} from "../../src/api/schemas";
+import {erc8001, order721} from "../data/orders";
 
 const buyer = '0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401'
 
@@ -20,12 +22,14 @@ const apiConfig = {
     }
 
 ;(async () => {
+
+      // if(!validateOrderWithCounter(erc8001)) console.log(validateOrderWithCounter.errors)
     //, apiConfig[chainId]
         const sdk = new SeaportSDK({
             chainId,
             address: buyer,
             privateKeys: secrets.privateKeys
-        })
+        },apiConfig[chainId])
         try {
             const asset = (await sdk.getOwnerAssets({limit: 2}))[1]
             const buyParams = {
@@ -38,12 +42,14 @@ const apiConfig = {
                         "royaltyFeeAddress": asset.royaltyFeeAddress
                     }
                 },
-                "startAmount": 0.02
+                "startAmount": 0.002
             } as BuyOrderParams
 
             const order = await sdk.createBuyOrder(buyParams)
             // console.log(order)
-            // const res = await sdk.api.postOrder(JSON.stringify(order))
+            const res = await sdk.api.postOrder(JSON.stringify(order))
+
+            console.log(res)
 
             const tx = await sdk.fulfillOrder(JSON.stringify(order))
             await tx.wait()

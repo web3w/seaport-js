@@ -1,6 +1,6 @@
 {
   "name": "seaport-js",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Javascript SDK for the OpenSea Market ",
   "main": "lib/index.js",
   "type": "lib/index.d.ts",
@@ -18,11 +18,11 @@
     "cover": "nyc --reporter=html npm run test"
   },
   "dependencies": {
-    "jsonschema": "^1.4.1",
+    "ajv": "^8.11.0",
     "merkletreejs": "^0.2.31",
     "query-string": "^7.1.1",
     "web3-abi-coder": "^1.1.2",
-    "web3-accounts": "1.2.1",
+    "web3-accounts": "1.2.2",
     "web3-wallets": "^2.1.1"
   },
   "devDependencies": {

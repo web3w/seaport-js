@@ -1,6 +1,6 @@
 export const OPENSEA_API_KEY = "2f6f419a083c46de9d83ce3dbe7db601" // common
 //Api Timeout
-export const OPENSEA_API_TIMEOUT = 10000
+export const OPENSEA_API_TIMEOUT = 20000
 
 export const CHAIN_PATH: { [key: string]: string } = {
     1: 'ethereum',

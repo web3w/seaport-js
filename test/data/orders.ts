@@ -1,39 +1,106 @@
 import {OrderWithCounter} from "../../src/types";
 
-export const order721:OrderWithCounter = {
+export const gemOrder ={
+    "parameters":{
+        "offerer":"0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087",
+        "offer":[
+            {
+                "itemType":2,
+                "token":"0x79fcdef22feed20eddacbb2587640e45491b757f",
+                "identifierOrCriteria":"8073",
+                "startAmount":1,
+                "endAmount":1
+            }
+        ],
+        "consideration":[
+            {
+                "itemType":0,
+                "token":"0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria":0,
+                "startAmount":"2775000000000000000",
+                "endAmount":"2775000000000000000",
+                "recipient":"0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087"
+            },
+            {
+                "itemType":0,
+                "token":"0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria":0,
+                "startAmount":"75000000000000000",
+                "endAmount":"75000000000000000",
+                "recipient":"0x8De9C5A032463C561423387a9648c5C7BCC5BC90"
+            },
+            {
+                "itemType":0,
+                "token":"0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria":0,
+                "startAmount":"150000000000000000",
+                "endAmount":"150000000000000000",
+                "recipient":"0x2c47540d6f4589a974e651f13a27dd9a62f30b89"
+            }
+        ],
+        "startTime":"1655779246",
+        "endTime":"1655865646",
+        "orderType":2,
+        "zone":"0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
+        "zoneHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+        "salt":"13",
+        "conduitKey":"0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+        "totalOriginalConsiderationItems":3,
+        "counter":0
+    },
+    "signature":"0xd2c4b9617f0137a5d4c236a10577b4038d423b685c20e164c8a78789dd10b5f7c55db5577ab1196a73cf5f8cceacef176f649004dd8c8aa6a4cf231835e9ee0f"
+}
+export const order721 = {
     "parameters": {
-        "offerer": "0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401",
-        "zone": "0x0000000000000000000000000000000000000000",
+        "offerer": "0x32f4B63A46c1D12AD82cABC778D75aBF9889821a",
+        "zone": "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
         "orderType": 2,
-        "startTime": "1655577081",
-        "endTime": "1655577081317",
+        "startTime": "1655780163",
+        "endTime": "1656384963",
         "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "salt": "0x18178157e12",
+        "salt": "39191748015173235",
         "offer": [
             {
-                "itemType": 3,
-                "token": "0xb6316833725f866f2aad846de30a5f50f09e247b",
-                "identifierOrCriteria": "1655202183834",
-                "startAmount": "1",
-                "endAmount": "1"
+                "itemType": 2,
+                "token": "0x984ac9911c6839a6870a1040a5fb89dd66513bc5",
+                "identifierOrCriteria": "6136",
+                "startAmount": 1,
+                "endAmount": 1
             }
         ],
         "consideration": [
             {
                 "itemType": 0,
                 "token": "0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria": 0,
+                "startAmount": "462500000000000000",
+                "endAmount": "462500000000000000",
+                "recipient": "0x32f4B63A46c1D12AD82cABC778D75aBF9889821a"
+            },
+            {
+                "itemType": 0,
+                "token": "0x0000000000000000000000000000000000000000",
                 "identifierOrCriteria": "0",
-                "startAmount": "20000000000000000",
-                "endAmount": "20000000000000000",
-                "recipient": "0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401"
+                "startAmount": "12500000000000000",
+                "endAmount": "12500000000000000",
+                "recipient": "0x8De9C5A032463C561423387a9648c5C7BCC5BC90"
+            },
+            {
+                "itemType": 0,
+                "token": "0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria": "0",
+                "startAmount": "25000000000000000",
+                "endAmount": "25000000000000000",
+                "recipient": "0x545ed214984f3ec57fb6a614f2a6211f0481547f"
             }
         ],
-        "totalOriginalConsiderationItems": "1",
+        "totalOriginalConsiderationItems":3,
         "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
         "counter": 0
     },
-    "signature": "0x4bedab7e17b11491d2092d89b31bb556c28d55142f782c17b8b02855c3bcefa532f4b38ea583c47bb537209b1e9650b21cce5e812f1cba49df3016e5187f21881b"
+    "signature": "0x7db6fde67596ab16e4115544303e1a4c1c767cb7ac71b1d92967a9fb0e0abe7a15405137994daca3dffd3c7e2be01dbd2c3f8f78c43d8c4857c98477306f31d01b"
 }
+
 
 export const erc8001 = {
     "parameters": {

@@ -42,7 +42,7 @@ import {
     EIP_712_PRIMARY_TYPE,
     ItemType,
     KNOWN_CONDUIT_KEYS_TO_CONDUIT,
-    NO_CONDUIT,
+    NO_CONDUIT, ONE_HUNDRED_PERCENT_BP,
     SEAPORT_CONTRACT_NAME,
     SEAPORT_CONTRACT_VERSION
 } from "./constants";
@@ -56,7 +56,7 @@ export function computeFees(recipients: { address: string, points: number }[],
     let erc20TokenAmount = tokenTotal
     // recipients = recipients.filter(val => val.point > 0)
     const fees = recipients.map(val => {
-        const amount = tokenTotal.mul(val.points).div(10000)
+        const amount = tokenTotal.mul(val.points).div(ONE_HUNDRED_PERCENT_BP)
         erc20TokenAmount = erc20TokenAmount.sub(amount)
         return {
             itemType: tokenAddress == NULL_ADDRESS ? ItemType.NATIVE : ItemType.ERC20,
@@ -162,13 +162,6 @@ export class Seaport extends EventEmitter {
                 throw 'Seller asset is not enough'
             }
             return assetApprove
-            // if (!assetApprove.isApprove && assetApprove.calldata) {
-            //     const tx = await ethSend(this.walletInfo, assetApprove.calldata)
-            //     await tx.wait()
-            //     console.log("Approve Asset", tx.hash)
-            // }
-
-
         } else {
             const {
                 allowance,
@@ -185,16 +178,7 @@ export class Seaport extends EventEmitter {
                 balances,
                 calldata: spend.lt(allowance) ? undefined : calldata
             }
-            // if (amount.gt(allowance)) {
-            //     const tx = await ethSend(this.walletInfo, calldata)
-            //     await tx.wait();
-            //     const info = await this.userAccount.getTokenApprove(amount.toString(), operator);
-            //     console.log("CheckOrderMatch WETH Token setApproved", info.balances);
-            // }
-
-
         }
-
     }
 
     private async createOrder(offer: OfferItem[], consideration: ConsiderationItem[], expirationTime) {
@@ -360,7 +344,7 @@ export class Seaport extends EventEmitter {
 
         recipients.unshift({
             address: this.walletInfo.address,
-            points: 10000 - payPoints
+            points: ONE_HUNDRED_PERCENT_BP - payPoints
         })
 
         const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)

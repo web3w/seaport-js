@@ -4,16 +4,16 @@ import {SeaportAPI} from "./api/seaport";
 import {SwapEx} from "./swapEx/swapEx";
 
 import {
-    Asset,
-    APIConfig, Web3Accounts, ExchangetAgent, OrderSide, CreateOrderParams, MatchParams, SellOrderParams, BuyOrderParams
+    Asset, FeesInfo,
+    APIConfig, Web3Accounts, ExchangetAgent, OrderSide,
+    CreateOrderParams, MatchParams, SellOrderParams, BuyOrderParams
 } from "web3-accounts"
 
 import {
-    WalletInfo,
     AssetsQueryParams,
-    AssetCollection,
-    FeesInfo,
-} from "./types"
+    AssetCollection
+} from "./api/types"
+import {WalletInfo} from "web3-wallets";
 
 export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     public walletInfo: WalletInfo

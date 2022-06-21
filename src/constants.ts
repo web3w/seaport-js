@@ -80,5 +80,27 @@ export const NO_CONDUIT =
 // Supply here any known conduit keys as well as their conduits
 export const KNOWN_CONDUIT_KEYS_TO_CONDUIT = {};
 
-export const CROSS_CHAIN_SEAPORT_ADDRESS =
-    "0x00000000006c3852cbef3e08e8df289169ede581";
+
+// export const MERKLE_VALIDATOR_MAINNET =
+//     "0xbaf2127b49fc93cbca6269fade0f7f31df4c88a7";
+// export const MERKLE_VALIDATOR_RINKEBY =
+//     "0x45b594792a5cdc008d0de1c1d69faa3d16b3ddc1";
+//
+// export const CROSS_CHAIN_DEFAULT_CONDUIT_KEY =
+//     "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000";
+// const CROSS_CHAIN_DEFAULT_CONDUIT =
+//     "0x1e0049783f008a0085193e00003d00cd54003c71";
+//
+// export const CONDUIT_KEYS_TO_CONDUIT = {
+//     [CROSS_CHAIN_DEFAULT_CONDUIT_KEY]: CROSS_CHAIN_DEFAULT_CONDUIT,
+// };
+//
+// export const WETH_ADDRESS_BY_NETWORK = {
+//     [Network.Main]: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+//     [Network.Rinkeby]: "0xc778417e063141139fce010982780140aa0cd5ab",
+// } as const;
+//
+// export const DEFAULT_ZONE_BY_NETWORK = {
+//     [Network.Main]: "0x004c00500000ad104d7dbd00e3ae0a5c00560c00",
+//     [Network.Rinkeby]: "0x9b814233894cd227f561b78cc65891aa55c62ad2",
+// } as const;

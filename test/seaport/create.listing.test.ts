@@ -68,14 +68,10 @@ const apiConfig = {
                         "royaltyFeeAddress": "0x545ed214984f3ec57fb6a614f2a6211f0481547f"
                     }
                 },
-                "startAmount": 0.5
+                "startAmount": 0.6
             } as SellOrderParams
             const order = await sdk.createSellOrder(sellParams)
-
-            console.log(JSON.stringify(order,null,2))
-
             // await sdk.contracts.checkOrderPost(JSON.stringify(order))
-
             const res = await sdk.api.postOrder(JSON.stringify(order))
 
 
