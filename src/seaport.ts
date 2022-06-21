@@ -1,6 +1,6 @@
 import EventEmitter from 'events'
 
-import {SEAPORT_CONTRACTS_ADDRESSES, SeaportABI,} from './contracts/index'
+import {SEAPORT_CONTRACTS_ADDRESSES, SeaportABI} from './contracts/index'
 
 import {
     APIConfig,
@@ -22,12 +22,14 @@ import {
     LimitedCallSpec,
     NULL_ADDRESS,
     NULL_BLOCK_HASH,
-    WalletInfo
+    WalletInfo,
+    Contract, ethers
 } from "web3-wallets"
 
-import {BigNumber, Contract, ethers} from "ethers";
+import {BigNumber} from "ethers";
 import {
-    ConsiderationItem,
+    AdvancedOrder,
+    ConsiderationItem, FulfillOrdersMetadata, InsufficientApprovals,
     OfferItem,
     Order,
     OrderComponents,
@@ -42,13 +44,25 @@ import {
     EIP_712_PRIMARY_TYPE,
     ItemType,
     KNOWN_CONDUIT_KEYS_TO_CONDUIT,
-    NO_CONDUIT, ONE_HUNDRED_PERCENT_BP,
+    NO_CONDUIT,
+    offerAndConsiderationFulfillmentMapping,
+    ONE_HUNDRED_PERCENT_BP,
     SEAPORT_CONTRACT_NAME,
     SEAPORT_CONTRACT_VERSION
 } from "./constants";
 import {generateCriteriaResolvers} from "./utils/criteria";
-import {offerAndConsiderationFulfillmentMapping, validateAndSanitizeFromOrderStatus} from "./utils/fulfill";
-import {getSummedTokenAndIdentifierAmounts, isCriteriaItem, TimeBasedItemParams} from "./utils/item";
+import {
+    getMaximumSizeForOrder,
+    getSummedTokenAndIdentifierAmounts,
+    isCriteriaItem,
+    TimeBasedItemParams
+} from "./utils/item";
+import {
+    mapOrderAmountsFromFilledStatus,
+    mapOrderAmountsFromUnitsToFill,
+    validateAndSanitizeFromOrderStatus
+} from "./utils/order";
+import {getTransactionMethods} from "./utils/usecase";
 
 export function computeFees(recipients: { address: string, points: number }[],
                             tokenTotal: BigNumber,
@@ -81,11 +95,11 @@ export class Seaport extends EventEmitter {
     // address
     public contractAddresses: any
     // public WETHAddr: string
-    public feeRecipientAddress: string
+    public protocolFeeAddress: string
     public zoneAddress: string
     public pausableZoneAddress: string
     // contracts
-    public seaport: Contract
+    public readonly seaport: Contract
     public conduit: Contract
     public conduitController: Contract
     public userAccount: Web3Accounts
@@ -98,42 +112,35 @@ export class Seaport extends EventEmitter {
     constructor(wallet: WalletInfo, config?: APIConfig) {
         super()
         const contracts = config?.contractAddresses || SEAPORT_CONTRACTS_ADDRESSES[wallet.chainId]
-        this.feeRecipientAddress = contracts.FeeRecipientAddress
+        this.protocolFeeAddress = contracts.FeeRecipientAddress
         if (config?.protocolFeePoints) {
             this.protocolFeePoints = config.protocolFeePoints
-            this.feeRecipientAddress = config.protocolFeeAddress || contracts.FeeRecipientAddress
+            this.protocolFeeAddress = config.protocolFeeAddress || contracts.FeeRecipientAddress
         }
         this.walletInfo = wallet
         const chainId = wallet.chainId
         if (!contracts) {
             throw  chainId + 'Opensea sdk undefine contracts address'
         }
-        const exchangeAddr = contracts.Exchange
-        const conduitAddr = contracts.Conduit
-        const conduitControllerAddr = contracts.ConduitController
-
-        this.zoneAddress = contracts.Zone
-        this.pausableZoneAddress = contracts.PausableZone
-
-        //https://rinkeby.etherscan.io/address/0x1E0049783F008A0085193E00003D00cd54003c71#code
-        //Approve asset Conduit
-
+        const {Exchange, Conduit, ConduitController, Zone, PausableZone, GasToken} = contracts
+        this.zoneAddress = Zone
+        this.pausableZoneAddress = PausableZone
         this.contractAddresses = contracts
 
         this.GasWarpperToken = {
             name: 'GasToken',
             symbol: 'GasToken',
-            address: contracts.GasToken,
+            address: GasToken,
             decimals: 18
         }
         this.userAccount = new Web3Accounts(wallet)
         const options = this.userAccount.signer
-        if (exchangeAddr) {
-            this.seaport = new ethers.Contract(exchangeAddr, SeaportABI.seaport.abi, options)
-            this.conduit = new ethers.Contract(conduitAddr, SeaportABI.conduit.abi, options)
-            this.conduitController = new ethers.Contract(conduitControllerAddr, SeaportABI.conduitController.abi, options)
+        if (ConduitController && Exchange && Conduit) {
+            this.seaport = new ethers.Contract(Exchange, SeaportABI.seaport.abi, options)
+            this.conduit = new ethers.Contract(Conduit, SeaportABI.conduit.abi, options)
+            this.conduitController = new ethers.Contract(ConduitController, SeaportABI.conduitController.abi, options)
         } else {
-            throw `${this.walletInfo.chainId} abi undefined`
+            throw new Error(`${this.walletInfo.chainId} abi undefined`)
         }
 
         this.config = {
@@ -148,12 +155,19 @@ export class Seaport extends EventEmitter {
         this.defaultConduitKey = NO_CONDUIT;
     }
 
-    async getOrderApprove({
-                              asset,
-                              quantity = 1,
-                              paymentToken = NullToken,
-                              startAmount,
-                          }: CreateOrderParams, side: OrderSide) {
+    // public static SeaportInfo() {
+    //     return {
+    //         abi: SeaportABI,
+    //         address: SEAPORT_CONTRACTS_ADDRESSES
+    //     }
+    // }
+
+    public async getOrderApprove({
+                                     asset,
+                                     quantity = 1,
+                                     paymentToken = NullToken,
+                                     startAmount,
+                                 }: CreateOrderParams, side: OrderSide) {
         const operator = this.conduit.address
         const decimals: number = paymentToken ? paymentToken.decimals : 18
         if (side == OrderSide.Sell) {
@@ -181,12 +195,49 @@ export class Seaport extends EventEmitter {
         }
     }
 
-    private async createOrder(offer: OfferItem[], consideration: ConsiderationItem[], expirationTime) {
+    public async createOrder(offer: OfferItem[], consideration: ConsiderationItem[], expirationTime: number, listingTime?: number): Promise<OrderWithCounter> {
         const offerer = this.walletInfo.address
+        const operator = this.conduit.address
+        for (const offerAsset of offer) {
+            let approve = false, data: LimitedCallSpec | undefined
+            if (offerAsset.itemType == ItemType.ERC20) {
+                const {
+                    balances,
+                    allowance,
+                    calldata
+                } = await this.userAccount.getTokenApprove(offerAsset.token, operator)
+                if (ethers.BigNumber.from(offerAsset.endAmount).gt(balances)) {
+                    throw new Error("Offer amount less than balances")
+                }
+                if (ethers.BigNumber.from(offerAsset.endAmount).gt(allowance)) {
+                    approve = true
+                    data = calldata
+                }
+            } else {
+                const {isApprove, balances, calldata} = await this.userAccount.getAssetApprove({
+                    tokenAddress: offerAsset.token,
+                    tokenId: offerAsset.identifierOrCriteria,
+                    schemaName: offerAsset.itemType == ItemType.ERC721 ? "ERC721" : "ERC115"
+                }, operator)
+                if (ethers.BigNumber.from(offerAsset.endAmount).gt(balances)) {
+                    throw new Error("Offer amount less than balances")
+                }
+                if (isApprove) {
+                    approve = true
+                    data = calldata
+                }
+            }
+
+            if (!approve && data) {
+                const tx = await this.ethSend(data)
+                await tx.wait();
+                console.log("CreateBuyOrder Token setApproved");
+            }
+        }
 
         const orderType = OrderType.FULL_RESTRICTED
-        const startTime = Math.round(Date.now() / 1000).toString()
-        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7).toString()
+        const startTime = listingTime || Math.round(Date.now() / 1000)
+        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7)
         const conduitKey = await this.conduitController.getKey(this.conduit.address)
 
         let zone = this.pausableZoneAddress // ethers.constants.AddressZero
@@ -206,7 +257,7 @@ export class Seaport extends EventEmitter {
             consideration,
             conduitKey
         }
-        const resolvedCounter = (await this.seaport.getCounter(this.walletInfo.address)).toNumber()
+        const resolvedCounter = await this.getCounter(this.walletInfo.address)
 
         const signature = await this.signOrder(orderParameters, resolvedCounter)
 
@@ -216,128 +267,80 @@ export class Seaport extends EventEmitter {
         };
     }
 
-    async createBuyOrder({
-                             asset,
-                             quantity = 1,
-                             paymentToken = this.GasWarpperToken,
-                             expirationTime = 0,
-                             startAmount,
-                             protocolFeePoints,
-                             protocolFeeAddress
-                         }: BuyOrderParams): Promise<OrderWithCounter> {
+    public async createBuyOrder({
+                                    asset,
+                                    quantity = 1,
+                                    paymentToken = this.GasWarpperToken,
+                                    expirationTime = 0,
+                                    startAmount
+                                }: BuyOrderParams): Promise<OrderWithCounter> {
 
-        const {isApprove, calldata, balances} = await this.getOrderApprove({
-            asset,
-            quantity,
-            paymentToken,
-            expirationTime,
-            startAmount,
-        }, OrderSide.Buy)
+        const tokenAmount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
 
-        if (!isApprove && calldata) {
-            const tx = await ethSend(this.walletInfo, calldata)
-            await tx.wait();
-            console.log("CreateBuyOrder Token setApproved", balances);
-        }
-
-        const amount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
-        console.log("createBuyOrder", amount.toString())
         const offer: OfferItem[] = [
             {
                 itemType: ItemType.ERC20,
                 token: paymentToken.address,
                 identifierOrCriteria: "0",
-                startAmount: amount.toString(),
-                endAmount: amount.toString()
+                startAmount: tokenAmount.toString(),
+                endAmount: tokenAmount.toString()
             }
         ]
-        const assetQut = quantity.toString()
+        if (!asset?.tokenId) throw new Error("The token ID cannot be empty")
         const consideration: ConsiderationItem[] = [{
             itemType: asset.schemaName.toLowerCase() == "erc721" ? ItemType.ERC721 : ItemType.ERC1155,
             token: asset.tokenAddress,
-            identifierOrCriteria: asset?.tokenId?.toString() || "1",
-            startAmount: assetQut,
-            endAmount: assetQut,
+            identifierOrCriteria: asset.tokenId,
+            startAmount: quantity.toString(),
+            endAmount: quantity.toString(),
             recipient: this.walletInfo.address
         }]
 
-        let recipients: { address: string, points: number }[] = []
-        protocolFeePoints = protocolFeePoints || this.protocolFeePoints
-        if (protocolFeePoints != 0) {
-            recipients.push({
-                address: protocolFeeAddress || this.feeRecipientAddress,
-                points: protocolFeePoints
-            })
-        }
-
+        const recipients: { address: string, points: number }[] = [{
+            address: this.protocolFeeAddress,
+            points: this.protocolFeePoints
+        }]
         const collection = asset.collection
-        if (collection && collection.royaltyFeePoints) {
-            if (!collection.royaltyFeeAddress) throw "Inroyalties greater than 0 The address cannot be empty!"
+        if (collection && collection.royaltyFeePoints && collection.royaltyFeeAddress) {
             recipients.push({
                 address: collection.royaltyFeeAddress,
                 points: collection.royaltyFeePoints
             })
         }
-        const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
-        const {fees} = computeFees(recipients, start, paymentToken.address)
+
+        const {fees} = computeFees(recipients, tokenAmount, paymentToken.address)
         consideration.push(...fees)
-
         return this.createOrder(offer, consideration, expirationTime)
-
     }
 
-    async createSellOrder({
-                              asset,
-                              quantity = 1,
-                              paymentToken = NullToken,
-                              listingTime = 0,
-                              expirationTime = 0,
-                              startAmount,
-                              endAmount,
-                              protocolFeePoints,
-                              protocolFeeAddress
-                          }: SellOrderParams): Promise<OrderWithCounter> {
-
-        const {isApprove, calldata, balances} = await this.getOrderApprove({
-            asset,
-            quantity,
-            paymentToken,
-            expirationTime,
-            startAmount,
-        }, OrderSide.Sell)
-
-        if (!isApprove && calldata) {
-            const tx = await ethSend(this.walletInfo, calldata)
-            await tx.wait();
-            console.log("CreateSellOrder Token setApproved", balances);
-        }
+    public async createSellOrder({
+                                     asset,
+                                     quantity = 1,
+                                     paymentToken = NullToken,
+                                     expirationTime = 0,
+                                     startAmount,
+                                     listingTime
+                                 }: SellOrderParams): Promise<OrderWithCounter> {
 
         const assetAmount = quantity.toString()
-        const offer: OfferItem[] = [
-            {
-                itemType: asset.schemaName.toLowerCase() == "erc721" ? ItemType.ERC721 : ItemType.ERC1155,
-                token: asset.tokenAddress,
-                identifierOrCriteria: asset?.tokenId?.toString() || "1",
-                startAmount: assetAmount,
-                endAmount: assetAmount
-            }
-        ]
+        const offer: OfferItem[] = [{
+            itemType: asset.schemaName.toLowerCase() == "erc721" ? ItemType.ERC721 : ItemType.ERC1155,
+            token: asset.tokenAddress,
+            identifierOrCriteria: asset?.tokenId?.toString() || "1",
+            startAmount: assetAmount,
+            endAmount: assetAmount
+        }]
 
-        let recipients: { address: string, points: number }[] = []
-        protocolFeePoints = protocolFeePoints || this.protocolFeePoints
-        if (protocolFeePoints != 0) {
-            recipients.push({
-                address: protocolFeeAddress || this.feeRecipientAddress,
-                points: protocolFeePoints
-            })
-        }
+        const recipients: { address: string, points: number }[] = [{
+            address: this.protocolFeeAddress,
+            points: this.protocolFeePoints
+        }]
 
-        const collection = asset.collection
-        if (collection && collection.royaltyFeePoints) {
-            if (!collection.royaltyFeeAddress) throw "Inroyalties greater than 0 The address cannot be empty!"
+        const {collection: {royaltyFeePoints, royaltyFeeAddress}} = asset
+        if (asset.collection && royaltyFeePoints && royaltyFeeAddress) {
             recipients.push({
-                address: collection.royaltyFeeAddress,
-                points: collection.royaltyFeePoints
+                address: royaltyFeeAddress,
+                points: royaltyFeePoints
             })
         }
         const payPoints = recipients.map(val => Number(val.points)).reduce((cur, next) => cur + next)
@@ -346,11 +349,9 @@ export class Seaport extends EventEmitter {
             address: this.walletInfo.address,
             points: ONE_HUNDRED_PERCENT_BP - payPoints
         })
-
-        const start = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
-        // const end = ethers.utils.parseUnits((endAmount || startAmount).toString(), paymentToken.decimals).toString()
-        const {fees: consideration} = computeFees(recipients, start, paymentToken.address)
-        return this.createOrder(offer, consideration, expirationTime)
+        const tokeneAmount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+        const {fees: consideration} = computeFees(recipients, tokeneAmount, paymentToken.address)
+        return this.createOrder(offer, consideration, expirationTime, listingTime)
     }
 
     /**
@@ -359,7 +360,7 @@ export class Seaport extends EventEmitter {
      * @param counter counter of the offerer
      * @returns the order signature
      */
-    async signOrder(
+    public async signOrder(
         orderParameters: OrderParameters,
         counter: number
     ): Promise<string> {
@@ -383,54 +384,161 @@ export class Seaport extends EventEmitter {
         return signature
     }
 
-    async getMatchCallData(params: MatchParams) {
-        const {orderStr, takerAmount} = params
-        if (takerAmount) {
-            return this.fulfillAdvancedOrder({order: JSON.parse(orderStr)})
-        } else {
-            return this.fulfillBasicOrder({order: JSON.parse(orderStr)})
-        }
-    }
 
-    public async fulfillOrder(orderStr: string) {
-        // await this.checkMatchOrder(orderStr)
-        const callData = await this.getMatchCallData({orderStr})
-        // console.assert(sell.exchange.toLowerCase() == this.seaport.address.toLowerCase(), 'AcceptOrder error')
-        return this.ethSend(transactionToCallData(callData))
-    }
-
-    public async checkOrderPost(orderStr: string, taker: string = NULL_ADDRESS) {
-        const {parameters, signature} = JSON.parse(orderStr)
+    private async checkOrderPost(order: string, taker: string = NULL_ADDRESS) {
+        const {parameters, signature} = JSON.parse(order)
         const operator = this.conduit.address
         const {offer} = parameters
         const offerAsset = offer[0]
         if (offerAsset.itemType == ItemType.ERC20) {
             const {balances, allowance} = await this.userAccount.getTokenApprove(offerAsset.token, operator)
             console.log(balances, allowance)
+
         } else {
-            const {isApprove, balances} = await this.userAccount.getAssetApprove({
+            const {isApprove, balances, calldata} = await this.userAccount.getAssetApprove({
                 tokenAddress: offerAsset.token,
                 tokenId: offerAsset.identifierOrCriteria,
                 schemaName: offerAsset.itemType == ItemType.ERC721 ? "ERC721" : "ERC115"
             }, operator)
-            console.log(isApprove, balances)
+            console.log(balances, isApprove)
         }
     }
 
-    async fulfillAdvancedOrder({
-                                   order,
-                                   tips = [],
-                               }: {
-        order: OrderWithCounter;
+
+    public async getMatchCallData({
+                                      order,
+                                      takerAmount,
+                                      tips = [],
+                                  }: {
+        order: Order;
+        takerAmount?: string,
         tips?: ConsiderationItem[];
     }) {
-        const conduitKey = await this.conduitController.getKey(this.conduit.address)
-        const {parameters} = order;
-        const {offer, consideration} = parameters
+
+        if (takerAmount) {
+            return this.fulfillAdvancedOrder({order, takerAmount, tips})
+        } else {
+            return this.fulfillBasicOrder({order, tips})
+        }
+    }
+
+    public async fulfillAvailableAdvancedOrders({
+                                                    orders,
+                                                    takerAmount,
+                                                    recipient,
+                                                    tips = [],
+                                                }: {
+        orders: Order[]
+        takerAmount: string
+        recipient?: string
+        tips?: ConsiderationItem[]
+    }) {
+        // 1. advancedOrders:OrderWithCounter []
+        // 2 "criteriaResolvers": [],
+        // 3  "offerFulfillments":
+        // 4  "considerationFulfillments":
+        // 5  "fulfillerConduitKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        // 6  "recipient": "0x57c17FdC47720D3c56cfB0C3Ded460267BCD642D",
+        // 7   "maximumFulfilled": "1"
+
+
+        const advancedOrdersWithTips: AdvancedOrder[] = []
+
+        const offers: OfferItem[] = [], considerations: ConsiderationItem[] = []
+
+        let totalNativeAmount = BigNumber.from(0);
+        const ordersMetadata: FulfillOrdersMetadata = []
+        for (const order of orders) {
+
+            const {parameters} = order
+            const orderStatus = await this.getOrderStatus(this.getOrderHash(parameters));
+            const {totalFilled, totalSize} = orderStatus
+            // const totalSize = getMaximumSizeForOrder(order)
+            // If we are supplying units to fill, we adjust the order by the minimum of the amount to fill and
+            // the remaining order left to be fulfilled
+            const orderWithAdjustedFills = takerAmount
+                ? mapOrderAmountsFromUnitsToFill(order, {unitsToFill: takerAmount, totalFilled, totalSize})
+                : mapOrderAmountsFromFilledStatus(order, {totalFilled, totalSize});
+            const {parameters: {offer, consideration}} = orderWithAdjustedFills;
+            offers.push(...offer)
+            considerations.push(...consideration)
+
+            const considerationIncludingTips = [
+                ...order.parameters.consideration,
+                ...tips,
+            ];
+
+            const currentBlockTimestamp = new Date().getTime();
+            const timeBasedItemParams = {
+                startTime: order.parameters.startTime,
+                endTime: order.parameters.endTime,
+                currentBlockTimestamp,
+                ascendingAmountTimestampBuffer: this.config.ascendingAmountFulfillmentBuffer,
+                isConsiderationItem: true,
+            };
+
+            totalNativeAmount = totalNativeAmount.add(
+                getSummedTokenAndIdentifierAmounts({
+                    items: considerationIncludingTips,
+                    criterias: [],
+                    timeBasedItemParams,
+                })[ethers.constants.AddressZero]?.["0"] ?? BigNumber.from(0)
+            );
+        }
+
+        const considerationIncludingTips = [...considerations, ...tips];
+
+        const offerCriteriaItems = offers.filter(({itemType}) => isCriteriaItem(itemType));
+
+        const considerationCriteriaItems = considerationIncludingTips.filter(({itemType}) => isCriteriaItem(itemType));
+
+        const hasCriteriaItems = offerCriteriaItems.length > 0 || considerationCriteriaItems.length > 0;
+
+        //2.criteriaResolvers:CriteriaResolver[]
+        const criteriaResolvers = hasCriteriaItems ? generateCriteriaResolvers({orders}) : []
+
+        //
+        const payableOverrides = {value: totalNativeAmount};
+
+        const fulfillerConduitKey = "0x0000000000000000000000000000000000000000000000000000000000000000"
+        const offerFulfillments = []
+        const considerationFulfillments = []
+        return this.seaport.populateTransaction.fulfillAvailableAdvancedOrders(advancedOrdersWithTips, criteriaResolvers,
+            offerFulfillments, considerationFulfillments,
+            fulfillerConduitKey, recipient, advancedOrdersWithTips.length, payableOverrides)
+    }
+
+    public async fulfillAdvancedOrder({
+                                          order,
+                                          takerAmount,
+                                          recipient,
+                                          tips = [],
+                                      }: {
+        order: Order
+        takerAmount: string
+        recipient?: string
+        tips?: ConsiderationItem[]
+    }) {
+
+        const {parameters} = order
+        const orderStatus = await this.getOrderStatus(this.getOrderHash(parameters));
+        const {totalFilled, totalSize} = orderStatus
+        // const totalSize = getMaximumSizeForOrder(order)
+        // If we are supplying units to fill, we adjust the order by the minimum of the amount to fill and
+        // the remaining order left to be fulfilled
+        const orderWithAdjustedFills = takerAmount
+            ? mapOrderAmountsFromUnitsToFill(order, {unitsToFill: takerAmount, totalFilled, totalSize})
+            : mapOrderAmountsFromFilledStatus(order, {totalFilled, totalSize});
+
+        const {parameters: {offer, consideration}} = orderWithAdjustedFills;
+
+        // const conduitKey = await this.conduitController.getKey(this.conduit.address)
+        // const {parameters} = order;
+        // const {offer, consideration} = parameters
         const orderAccountingForTips = {
             ...order,
             parameters: {
-                ...order.parameters,
+                parameters,
                 consideration: [...order.parameters.consideration, ...tips]
             },
         };
@@ -444,24 +552,17 @@ export class Seaport extends EventEmitter {
 
         const considerationIncludingTips = [...consideration, ...tips];
 
-        const offerCriteriaItems = offer.filter(({itemType}) =>
-            isCriteriaItem(itemType)
-        );
+        const offerCriteriaItems = offer.filter(({itemType}) => isCriteriaItem(itemType));
 
-        const considerationCriteriaItems = considerationIncludingTips.filter(
-            ({itemType}) => isCriteriaItem(itemType)
-        );
+        const considerationCriteriaItems = considerationIncludingTips.filter(({itemType}) => isCriteriaItem(itemType));
 
-        const hasCriteriaItems =
-            offerCriteriaItems.length > 0 || considerationCriteriaItems.length > 0;
+        const hasCriteriaItems = offerCriteriaItems.length > 0 || considerationCriteriaItems.length > 0;
 
         //2.criteriaResolvers:CriteriaResolver[]
         const criteriaResolvers = hasCriteriaItems
             ? generateCriteriaResolvers({orders: [order]})
             : []
 
-
-        const orderStatus = await this.seaport.getOrderStatus(this.getOrderHash(parameters))
         const sanitizedOrder = validateAndSanitizeFromOrderStatus(
             order,
             orderStatus
@@ -487,17 +588,17 @@ export class Seaport extends EventEmitter {
         // 3.fulfillerConduitKey: 0x0000000000000000000000000000000000000000000000000000000000000000
         const fulfillerConduitKey = NULL_BLOCK_HASH
         // 4.recipient: 0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401
-        const recipient = this.walletInfo.address
+        recipient = recipient || this.walletInfo.address
 
 
         return this.seaport.populateTransaction.fulfillAdvancedOrder(advancedOrder, criteriaResolvers, fulfillerConduitKey, recipient, payableOverrides)
     }
 
-    async fulfillBasicOrder({
-                                order,
-                                tips = [],
-                            }: {
-        order: OrderWithCounter;
+    public async fulfillBasicOrder({
+                                       order,
+                                       tips = [],
+                                   }: {
+        order: Order;
         tips?: ConsiderationItem[];
     }) {
         const conduitKey = await this.conduitController.getKey(this.conduit.address)
@@ -507,10 +608,7 @@ export class Seaport extends EventEmitter {
         const offerItem = offer[0];
         const [forOfferer, ...forAdditionalRecipients] = considerationIncludingTips;
 
-        const basicOrderRouteType =
-            offerAndConsiderationFulfillmentMapping[offerItem.itemType]?.[
-                forOfferer.itemType
-                ];
+        const basicOrderRouteType = offerAndConsiderationFulfillmentMapping[offerItem.itemType]?.[forOfferer.itemType];
 
         if (basicOrderRouteType === undefined) {
             throw new Error(
@@ -573,8 +671,7 @@ export class Seaport extends EventEmitter {
             startTime: order.parameters.startTime,
             endTime: order.parameters.endTime,
             salt: order.parameters.salt,
-            totalOriginalAdditionalRecipients:
-                order.parameters.consideration.length - 1,
+            totalOriginalAdditionalRecipients: order.parameters.consideration.length - 1,
             signature: order.signature,
             fulfillerConduitKey: conduitKey,
             additionalRecipients,
@@ -640,9 +737,10 @@ export class Seaport extends EventEmitter {
      * Calculates the order hash of order components so we can forgo executing a request to the contract
      * This saves us RPC calls and latency.
      */
-    getOrderHash(orderComponents: OrderComponents): string {
-        return getEIP712StructHash(EIP_712_PRIMARY_TYPE, EIP_712_ORDER_TYPE, orderComponents as any)
-        // return this.seaport.getOrderHash(order)
+    public getOrderHash(orderParameters: OrderParameters): string {
+        return this.seaport.getOrderHash(orderParameters)
+        // return getEIP712StructHash(EIP_712_PRIMARY_TYPE, EIP_712_ORDER_TYPE, orderComponents as any)
+
     }
 
     async ethSend(callData: LimitedCallSpec) {

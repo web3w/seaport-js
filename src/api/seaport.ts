@@ -1,94 +1,21 @@
 import {sleep} from "web3-wallets";
 import QueryString from "querystring";
 import {
-    APIConfig,
-    OrderParameters,
-    OfferItem,
-    ConsiderationItem
+    APIConfig
 } from "../types";
 
 import {
     AssetCollection,
     OrdersQueryParams,
-    AssetsQueryParams, ProtocolData
+    AssetsQueryParams
 } from "./types"
 
 import {OPENSEA_API_TIMEOUT, OPENSEA_API_CONFIG, OPENSEA_API_KEY, CHAIN_PATH} from "./config";
 import {OrderSide, BaseFetch} from "web3-accounts"
 import {ItemType} from "../constants";
 import {OrderV2} from "./types";
-import {validateOrderV2, validateOrderWithCounter} from "./schemas";
+import {validateOrderV2, validateOrderWithCounter} from "../utils/schemas";
 import {deserializeOrder} from "./utils";
-
-export interface OfferItemModel {
-    item_type: number
-    token: string
-    identifier_or_criteria: string
-    startAmount: number
-    endAmount: number
-}
-
-export interface OfferModel {
-    offer_item: OfferItemModel
-}
-
-export interface ConsiderationItemModel extends OfferItemModel {
-    recipient: string
-}
-
-export interface ConsiderationModel {
-    consideration_item: ConsiderationItemModel
-}
-
-
-export type OrderParametersModel = {
-    offerer: string
-    zone: string
-    zone_hash: string
-    start_time: number
-    end_time: number
-    order_type: number
-    salt: string
-    conduitKey: string
-    nonce: string,
-    offer: OfferItemModel[],
-    consideration: ConsiderationItemModel[]
-}
-
-export function converToPost(order: OrderParameters): OrderParametersModel {
-
-    // const {parameters: order_parameters, signature} = order721
-    const {offerer, zone, zoneHash, startTime, endTime, orderType, salt, conduitKey, offer, consideration} = order
-    const offerItem: OfferItemModel[] = offer.map((val: OfferItem) => ({
-        item_type: val.itemType,
-        token: val.token,
-        identifier_or_criteria: val.identifierOrCriteria,
-        startAmount: Number(val.startAmount),
-        endAmount: Number(val.endAmount)
-    }))
-    const considerationItme: ConsiderationItemModel[] = consideration.map((val: ConsiderationItem) => ({
-        item_type: val.itemType,
-        token: val.token,
-        identifier_or_criteria: val.identifierOrCriteria,
-        startAmount: Number(val.startAmount),
-        endAmount: Number(val.endAmount),
-        recipient: val.recipient
-    }))
-    return {
-        offerer,
-        zone,
-        zone_hash: zoneHash,
-        start_time: Number(startTime),
-        end_time: Number(endTime),
-        order_type: orderType,
-        salt,
-        conduitKey,
-        nonce: "0",
-        offer: offerItem,
-        consideration: considerationItme
-    }
-}
-
 
 export class SeaportAPI extends BaseFetch {
     public chainPath: string
@@ -213,6 +140,7 @@ export class SeaportAPI extends BaseFetch {
                     'X-API-KEY': this.apiKey || OPENSEA_API_KEY
                 }
             }
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
             parameters.totalOriginalConsiderationItems = parameters.consideration.length
             // itemType = 1 ERC20  "itemType" = 2, ERC721..

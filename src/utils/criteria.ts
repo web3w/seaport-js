@@ -11,7 +11,7 @@ export const generateCriteriaResolvers = ({
   offerCriterias?: InputCriteria[][];
   considerationCriterias?: InputCriteria[][];
 }) => {
-  // @ts-ignore
+
     const offerCriteriaItems = orders.flatMap((order, orderIndex) =>
     order.parameters.offer
       .map(

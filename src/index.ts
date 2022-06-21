@@ -6,7 +6,7 @@ import {SwapEx} from "./swapEx/swapEx";
 import {
     Asset, FeesInfo,
     APIConfig, Web3Accounts, ExchangetAgent, OrderSide,
-    CreateOrderParams, MatchParams, SellOrderParams, BuyOrderParams
+    CreateOrderParams, MatchParams, SellOrderParams, BuyOrderParams, MatchOrderOption, transactionToCallData
 } from "web3-accounts"
 
 import {
@@ -14,6 +14,8 @@ import {
     AssetCollection
 } from "./api/types"
 import {WalletInfo} from "web3-wallets";
+import {OrderComponents, OrderWithCounter, MatchOrdersParams, Order} from "./types";
+import {validateOrder, validateOrderWithCounter} from "./utils/schemas";
 
 export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     public walletInfo: WalletInfo
@@ -41,28 +43,66 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     }
 
     async getMatchCallData(params: MatchParams): Promise<any> {
-        return this.contracts.getMatchCallData(params)
+        const {orderStr, takerAmount} = params
+        if (!validateOrderWithCounter(orderStr)) throw validateOrderWithCounter.errors
+        return this.contracts.getMatchCallData({order: JSON.parse(orderStr) as OrderWithCounter})
     }
 
-    async createSellOrder(params: SellOrderParams): Promise<any> {
+    async createSellOrder(params: SellOrderParams): Promise<OrderWithCounter> {
         return this.contracts.createSellOrder(params)
     }
 
-    async createBuyOrder(params: BuyOrderParams): Promise<any> {
+    async createBuyOrder(params: BuyOrderParams): Promise<OrderWithCounter> {
         return this.contracts.createBuyOrder(params)
     }
 
-    async matchOrder(orderStr: string) {
-        return this.contracts.fulfillOrder(orderStr)
+    async fulfillOrder(orderStr: string, options?: MatchOrderOption) {
+        const order = JSON.parse(orderStr) as Order
+        if (!validateOrder(order)) throw validateOrder.errors
+
+        const {takerAmount, taker} = options || {}
+        let data
+        if (takerAmount) {
+            data = await this.contracts.fulfillAdvancedOrder({order, takerAmount, recipient: taker})
+        } else {
+            data = await this.contracts.fulfillBasicOrder({order})
+        }
+        return this.contracts.ethSend(transactionToCallData(data))
     }
 
-    async fulfillOrder(orderStr: string) {
-        return this.contracts.fulfillOrder(orderStr)
+    async fulfillOrders(orders: MatchOrdersParams) {
+        const {orderList, mixedPayment} = orders
+        if (orderList.length == 0) {
+            throw 'Seapotr fulfill orders eq 0'
+        }
+
+        if (orderList.length == 1) {
+            const {orderStr, metadata, takerAmount, taker} = orderList[0]
+            const oneOption: MatchOrderOption = {
+                metadata,
+                takerAmount,
+                taker,
+                mixedPayment
+            }
+            return this.fulfillOrder(orderStr, oneOption)
+        } else {
+            // return this.fulfillAvailableAdvancedOrders()
+        }
+
     }
 
     async cancelOrders(orders: string[]) {
-
-        return this.contracts.cancelOrders(orders.map(val => JSON.parse(val)))
+        if (orders.length == 0) {
+            return this.contracts.bulkCancelOrders()
+        } else {
+            const orderComp = orders.map((val) => {
+                const order = JSON.parse(val) as OrderWithCounter
+                if (!validateOrderWithCounter(order)) throw validateOrderWithCounter.errors
+                const {parameters} = order;
+                return order.parameters as OrderComponents
+            })
+            return this.contracts.cancelOrders(orderComp)
+        }
     }
 
     async getAssetBalances(asset: Asset, account?: string): Promise<string> {
@@ -103,7 +143,7 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
             royaltyFeeAddress: val.royaltyFeeAddress,
             royaltyFeePoints: val.royaltyFeePoints,
             protocolFeePoints: val.protocolFeePoints,
-            protocolFeeAddress: this.contracts.feeRecipientAddress
+            protocolFeeAddress: this.contracts.protocolFeeAddress
         }))
     }
 

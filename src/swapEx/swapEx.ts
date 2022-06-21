@@ -8,10 +8,10 @@ import {
 
 import {
     ethSend, LimitedCallSpec,
-    WalletInfo, getEstimateGas, CHAIN_CONFIG, getChainRpcUrl, TokenSchemaNames
+    WalletInfo, getEstimateGas, CHAIN_CONFIG, getChainRpcUrl
 } from 'web3-wallets'
 
-import {transactionToCallData, Web3Accounts} from "web3-accounts"
+import {Web3Accounts} from "web3-accounts"
 
 
 export interface SimpleTrades {
@@ -33,7 +33,7 @@ function getValidSwaps(intData: number, swaps: Array<TradeDetails>) {
         bData = `${b0}${bData}`
     }
     let allValue = ethers.BigNumber.from(0)
-    let swapValid: Array<TradeDetails> = []
+    const swapValid: Array<TradeDetails> = []
     const swapIsValid = swaps.map((val, index) => {
         const isValid = bData[swaps.length - index - 1] == '1' ? true : false
         if (isValid) {
@@ -88,6 +88,7 @@ export class SwapEx extends EventEmitter {
             }
         }
         const value = getSwapsValue(swaps)
+        // eslint-disable-next-line no-async-promise-executor
         return new Promise(async (resolve, reject) => {
             const callData = await this.swapExContract.populateTransaction.batchBuyWithETHSimulate(swaps, {value})
             const rpcUrl = await getChainRpcUrl(this.walletInfo.chainId)

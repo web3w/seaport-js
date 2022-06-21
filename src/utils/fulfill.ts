@@ -14,7 +14,7 @@ import type {
     Order,
     OrderParameters,
     OrderStatus,
-    InsufficientApprovals,
+    InsufficientApprovals, FulfillOrdersMetadata,
 } from "../types";
 import {generateCriteriaResolvers, getItemToCriteriaMap} from "./criteria";
 import {gcd} from "./gcd";
@@ -31,13 +31,11 @@ import {
     areAllCurrenciesSame,
     mapOrderAmountsFromFilledStatus,
     mapOrderAmountsFromUnitsToFill,
-    totalItemsAmount,
+    totalItemsAmount, validateAndSanitizeFromOrderStatus,
 } from "./order";
 import {executeAllActions, getTransactionMethods} from "./usecase";
 import {validateStandardFulfillBalancesAndApprovals} from "./balanceAndApprovalCheck";
 import {ERC721ABI, ERC20ABI} from "web3-abi-coder";
-import {OrderComponents} from "../types";
-
 
 /**
  * Get approval actions given a list of insufficent approvals.
@@ -201,22 +199,7 @@ export const shouldUseBasicFulfill = (
     );
 };
 
-export const offerAndConsiderationFulfillmentMapping: {
-    [_key in ItemType]?: { [_key in ItemType]?: BasicOrderRouteType };
-} = {
-    [ItemType.ERC20]: {
-        [ItemType.ERC721]: BasicOrderRouteType.ERC721_TO_ERC20,
-        [ItemType.ERC1155]: BasicOrderRouteType.ERC1155_TO_ERC20,
-    },
-    [ItemType.ERC721]: {
-        [ItemType.NATIVE]: BasicOrderRouteType.ETH_TO_ERC721,
-        [ItemType.ERC20]: BasicOrderRouteType.ERC20_TO_ERC721,
-    },
-    [ItemType.ERC1155]: {
-        [ItemType.NATIVE]: BasicOrderRouteType.ETH_TO_ERC1155,
-        [ItemType.ERC20]: BasicOrderRouteType.ERC20_TO_ERC1155,
-    },
-} as const;
+
 
 export async function fulfillStandardOrder({
                                                order,
@@ -382,39 +365,7 @@ export async function fulfillStandardOrder({
     };
 }
 
-export function validateAndSanitizeFromOrderStatus(
-    order: Order,
-    orderStatus: OrderStatus
-): Order {
-    const {isValidated, isCancelled, totalFilled, totalSize} = orderStatus;
 
-    if (totalSize.gt(0) && totalFilled.div(totalSize).eq(1)) {
-        throw new Error("The order you are trying to fulfill is already filled");
-    }
-
-    if (isCancelled) {
-        throw new Error("The order you are trying to fulfill is cancelled");
-    }
-
-    if (isValidated) {
-        // If the order is already validated, manually wipe the signature off of the order to save gas
-        return {parameters: {...order.parameters}, signature: "0x"};
-    }
-
-    return order;
-}
-
-export type FulfillOrdersMetadata = {
-    order: Order;
-    unitsToFill?: BigNumberish;
-    orderStatus: OrderStatus;
-    offerCriteria: InputCriteria[];
-    considerationCriteria: InputCriteria[];
-    tips: ConsiderationItem[];
-    extraData: string;
-    offererBalancesAndApprovals: any;
-    offererOperator: string;
-}[];
 
 export async function fulfillAvailableOrders({
                                                  ordersMetadata,

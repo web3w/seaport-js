@@ -1,6 +1,6 @@
 # seaport-js<!-- omit in toc -->
 
-Ethers implementation of OpenSea-JS
+SDK for the Seaport protocol
 
 [Open-js Doc](https://github.com/ProjectOpenSea/opensea-js)
 
@@ -81,14 +81,17 @@ export interface Asset {
 
 ```
 
-The `Asset` type is the minimal type you need for most marketplace actions. `WyvernSchemaName` is optional. If omitted,
-most actions will assume you're referring to a non-fungible, ERC721 asset. Other options include 'ERC20' and 'ERC1155'.
-You can import `import { WyvernSchemaName } from "opensea-js/lib/types"` to get the full range of schemas supported.
+The `Asset` type is the minimal type you need for most marketplace actions. `SchemaName` is optional. If omitted, most
+actions will assume you're referring to a non-fungible, ERC721 asset. Other options include 'ERC20' and 'ERC1155'.
 
 You can fetch an asset using the `OpenSeaAPI`, which will return an `OpenSeaAsset` for you (`OpenSeaAsset`
 extends `Asset`):
 
 ```TypeScript
+
+const ownerAsset = (await seaport.getOwnerAssets({limit: 1}))[0]
+
+
 const assetsQuery = {
     assets: [{
         asset_contract_addresses,  // string
@@ -96,6 +99,8 @@ const assetsQuery = {
     }],
     include_orders: true,
 } as AssetsQueryParams
+
+const assetFee = await seaport.getAssetsFees(assetsQuery)
 
 const asset = await seaport.api.getAssets(assetsQuery) 
 ```
@@ -158,7 +163,7 @@ declines until `expirationTime` is hit:
 // Expire this auction one day from now.
 // Note that we convert from the JavaScript timestamp (milliseconds):
 const expirationTime = Math.round(Date.now() / 1000 + 60 * 60 * 24)
- 
+
 const listing = await seaport.createSellOrder({
     asset: {
         tokenId,
@@ -226,16 +231,16 @@ up-to-date and detailed explanantions.
  * Attrs used by orderbook to make queries easier
  * More to come soon!
  */
- maker ? : string, // Address of the order's creator
- taker ? : string, // The null address if anyone is allowed to take the order
- side ? : OrderSide, // 0 for offers, 1 for auctions
- owner ? : string, // Address of owner of the order's asset 
- asset_contract_address ? : string, // Contract address for order's asset 
- token_ids ? : Array < number | string >
+maker ? : string, // Address of the order's creator
+    taker ? : string, // The null address if anyone is allowed to take the order
+    side ? : OrderSide, // 0 for offers, 1 for auctions
+    owner ? : string, // Address of owner of the order's asset 
+    asset_contract_address ? : string, // Contract address for order's asset 
+    token_ids ? : Array < number | string >
 
- // For pagination
- limit ? : number,
- offset ? : number
+    // For pagination
+    limit ? : number,
+    offset ? : number
 ```
 
 ### Buying Items
@@ -274,30 +279,32 @@ below to respond to the setup transactions that occur the first time a user acce
 
 ### Transferring Items or Coins (Gifting)
 
-A handy feature in OpenSea.js is the ability to transfer any supported asset (fungible or non-fungible tokens) in one line of JavaScript.
+A handy feature in OpenSea.js is the ability to transfer any supported asset (fungible or non-fungible tokens) in one
+line of JavaScript.
 
 To transfer an ERC-721 asset or an ERC-1155 asset, it's just one call:
 
 ```JavaScript
 
 const transactionHash = await seaport.transfer({
-  asset: { tokenId, tokenAddress },
-  fromAddress, // Must own the asset
-  toAddress
+    asset: {tokenId, tokenAddress},
+    fromAddress, // Must own the asset
+    toAddress
 })
 ```
 
-For fungible ERC-1155 assets, you can set `schemaName` to "ERC1155" and pass a `quantity` in to transfer multiple at once:
+For fungible ERC-1155 assets, you can set `schemaName` to "ERC1155" and pass a `quantity` in to transfer multiple at
+once:
 
 ```JavaScript
 
 const transactionHash = await seaport.transfer({
-  asset: {
-    tokenId,
-    tokenAddress,
-    schemaName: "ERC1155"
-  },
-  toAddress,
-  quantity: 2,
+    asset: {
+        tokenId,
+        tokenAddress,
+        schemaName: "ERC1155"
+    },
+    toAddress,
+    quantity: 2,
 })
 ```

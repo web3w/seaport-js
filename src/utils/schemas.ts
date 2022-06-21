@@ -1,16 +1,14 @@
 import Ajv, {JSONSchemaType, ValidateFunction} from "ajv";
 
-import {OrderFee, OrderV2} from "./types";
+import {OrderFee, OrderV2} from "../api/types";
 import {
     ConsiderationItem,
     OfferItem,
     OpenSeaAccount,
-    OpenSeaUser,
-    OrderComponents,
-    OrderType,
+    OpenSeaUser, Order,
+    OrderComponents, OrderParameters,
     OrderWithCounter
 } from "../types";
-import {ItemType} from "../constants";
 
 const userSchema: JSONSchemaType<OpenSeaUser> = {
     type: "object",
@@ -128,9 +126,9 @@ const orderComponentsSchama: JSONSchemaType<OrderComponents> = {
         offerer: {type: "string"},
         offer: {"type": "array", "items": offerItemSchama},
         consideration: {"type": "array", "items": considerationItemSchama},
-        startTime: {type: "string"},
-        endTime: {type: "string"},
-        orderType: {type: "number","enum": [0, 1, 2, 3]},
+        startTime: {type: "number"},
+        endTime: {type: "number"},
+        orderType: {type: "number", "enum": [0, 1, 2, 3]},
         zone: {type: "string"},
         zoneHash: {type: "string"},
         salt: {type: "string"},
@@ -151,6 +149,34 @@ const orderComponentsSchama: JSONSchemaType<OrderComponents> = {
         "counter"
     ]
 }
+
+const orderParametersSchama: JSONSchemaType<OrderParameters> = {
+    type: "object",
+    properties: {
+        offerer: {type: "string"},
+        offer: {"type": "array", "items": offerItemSchama},
+        consideration: {"type": "array", "items": considerationItemSchama},
+        startTime: {type: "number"},
+        endTime: {type: "number"},
+        orderType: {type: "number", "enum": [0, 1, 2, 3]},
+        zone: {type: "string"},
+        zoneHash: {type: "string"},
+        salt: {type: "string"},
+        conduitKey: {type: "string"}
+    },
+    required: [
+        "offerer",
+        "offer",
+        "consideration",
+        "startTime",
+        "endTime",
+        "orderType",
+        "zone",
+        "zoneHash",
+        "salt",
+        "conduitKey"
+    ]
+}
 const orderWithCounterSchema: JSONSchemaType<OrderWithCounter> = {
     type: "object",
     properties: {
@@ -163,8 +189,21 @@ const orderWithCounterSchema: JSONSchemaType<OrderWithCounter> = {
     ],
 };
 
+const orderSchema: JSONSchemaType<Order> = {
+    type: "object",
+    properties: {
+        parameters: {...orderParametersSchama, nullable: true},
+        signature: {type: "string", nullable: true}
+    },
+    required: [
+        "parameters",
+        "signature",
+    ],
+};
+
 
 const ajv = new Ajv();
 export const validateOrderV2 = ajv.compile(orderV2Schema) as ValidateFunction<OrderV2>
 export const validateOrderWithCounter = ajv.compile(orderWithCounterSchema) as ValidateFunction<OrderWithCounter>
+export const validateOrder = ajv.compile(orderSchema) as ValidateFunction<OrderWithCounter>
 //

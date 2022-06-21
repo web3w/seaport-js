@@ -11,7 +11,8 @@ import {
     Asset,
     Token,
     ExchangeMetadata,
-    APIConfig, FeesInfo
+    APIConfig,
+    MatchOrdersParams,
 } from "web3-accounts"
 import {ItemType, OrderType} from "./constants";
 
@@ -26,11 +27,11 @@ export {
     getChainRpcUrl,
     hexUtils,
     getEIP712DomainHash,
-    createEIP712TypedData
+    createEIP712TypedData,
 } from 'web3-wallets'
 export type {Signature, WalletInfo, LimitedCallSpec, EIP712TypedData, EIP712Domain} from 'web3-wallets'
 
-export type {Asset, Token, APIConfig, ExchangeMetadata}
+export type {Asset, Token, APIConfig, ExchangeMetadata,MatchOrdersParams}
 
 export type SeaportConfig = {
     // Used because fulfillments may be invalid if confirmations take too long. Default buffer is 5 minutes
@@ -108,6 +109,11 @@ export type Order = {
     signature: string;
 };
 
+export type OrderWithCounter = {
+    parameters: OrderComponents;
+    signature: string;
+};
+
 export type OrderStatus = {
     isValidated: boolean;
     isCancelled: boolean;
@@ -115,10 +121,7 @@ export type OrderStatus = {
     totalSize: BigNumber;
 };
 
-export type OrderWithCounter = {
-    parameters: OrderComponents;
-    signature: string;
-};
+
 
 //----------- Item-------------
 export type BasicErc721Item = {
@@ -186,6 +189,20 @@ export type AdvancedOrder = Order & {
     denominator: BigNumber;
     extraData: string;
 };
+
+export type FulfillOrdersMetadata = {
+    order: Order;
+    unitsToFill?: BigNumberish;
+    orderStatus: OrderStatus;
+    offerCriteria: InputCriteria[];
+    considerationCriteria: InputCriteria[];
+    tips: ConsiderationItem[];
+    extraData: string;
+    offererBalancesAndApprovals: any;
+    offererOperator: string;
+}[];
+
+
 
 export type TransactionMethods<T = unknown> = {
     buildTransaction: (overrides?: Overrides) => Promise<PopulatedTransaction>;

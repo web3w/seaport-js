@@ -28,7 +28,7 @@ export const executeAllActions = async <
 const instanceOfOverrides = <
   T extends Overrides | PayableOverrides | CallOverrides
 >(
-  obj: Object | undefined
+  obj: any
 ): obj is T => {
   const validKeys = [
     "gasLimit",

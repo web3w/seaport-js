@@ -1,36 +1,36 @@
-import { BigNumber } from "ethers";
+import {BigNumber} from "ethers";
 
 export const SEAPORT_CONTRACT_NAME = "Seaport";
 export const SEAPORT_CONTRACT_VERSION = "1.1";
-export const EIP_712_PRIMARY_TYPE="OrderComponents"
+export const EIP_712_PRIMARY_TYPE = "OrderComponents"
 export const EIP_712_ORDER_TYPE = {
     OrderComponents: [
-        { name: "offerer", type: "address" },
-        { name: "zone", type: "address" },
-        { name: "offer", type: "OfferItem[]" },
-        { name: "consideration", type: "ConsiderationItem[]" },
-        { name: "orderType", type: "uint8" },
-        { name: "startTime", type: "uint256" },
-        { name: "endTime", type: "uint256" },
-        { name: "zoneHash", type: "bytes32" },
-        { name: "salt", type: "uint256" },
-        { name: "conduitKey", type: "bytes32" },
-        { name: "counter", type: "uint256" },
+        {name: "offerer", type: "address"},
+        {name: "zone", type: "address"},
+        {name: "offer", type: "OfferItem[]"},
+        {name: "consideration", type: "ConsiderationItem[]"},
+        {name: "orderType", type: "uint8"},
+        {name: "startTime", type: "uint256"},
+        {name: "endTime", type: "uint256"},
+        {name: "zoneHash", type: "bytes32"},
+        {name: "salt", type: "uint256"},
+        {name: "conduitKey", type: "bytes32"},
+        {name: "counter", type: "uint256"},
     ],
     OfferItem: [
-        { name: "itemType", type: "uint8" },
-        { name: "token", type: "address" },
-        { name: "identifierOrCriteria", type: "uint256" },
-        { name: "startAmount", type: "uint256" },
-        { name: "endAmount", type: "uint256" },
+        {name: "itemType", type: "uint8"},
+        {name: "token", type: "address"},
+        {name: "identifierOrCriteria", type: "uint256"},
+        {name: "startAmount", type: "uint256"},
+        {name: "endAmount", type: "uint256"},
     ],
     ConsiderationItem: [
-        { name: "itemType", type: "uint8" },
-        { name: "token", type: "address" },
-        { name: "identifierOrCriteria", type: "uint256" },
-        { name: "startAmount", type: "uint256" },
-        { name: "endAmount", type: "uint256" },
-        { name: "recipient", type: "address" },
+        {name: "itemType", type: "uint8"},
+        {name: "token", type: "address"},
+        {name: "identifierOrCriteria", type: "uint256"},
+        {name: "startAmount", type: "uint256"},
+        {name: "endAmount", type: "uint256"},
+        {name: "recipient", type: "address"},
     ],
 };
 
@@ -69,6 +69,23 @@ export enum BasicOrderRouteType {
     ERC721_TO_ERC20,
     ERC1155_TO_ERC20,
 }
+
+export const offerAndConsiderationFulfillmentMapping: {
+    [_key in ItemType]?: { [_key in ItemType]?: BasicOrderRouteType };
+} = {
+    [ItemType.ERC20]: {
+        [ItemType.ERC721]: BasicOrderRouteType.ERC721_TO_ERC20,
+        [ItemType.ERC1155]: BasicOrderRouteType.ERC1155_TO_ERC20,
+    },
+    [ItemType.ERC721]: {
+        [ItemType.NATIVE]: BasicOrderRouteType.ETH_TO_ERC721,
+        [ItemType.ERC20]: BasicOrderRouteType.ERC20_TO_ERC721,
+    },
+    [ItemType.ERC1155]: {
+        [ItemType.NATIVE]: BasicOrderRouteType.ETH_TO_ERC1155,
+        [ItemType.ERC20]: BasicOrderRouteType.ERC20_TO_ERC1155,
+    },
+} as const;
 
 export const MAX_INT = BigNumber.from(
     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"

@@ -1,4 +1,4 @@
-import { OpenSeaAccount, OpenSeaUser} from "../types";
+import {ConsiderationItem, OfferItem, OpenSeaAccount, OpenSeaUser, OrderParameters} from "../types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const accountFromJSON = (account: any): OpenSeaAccount => {
@@ -94,3 +94,76 @@ export const deserializeOrder = (order: SerializedOrderV2): OrderV2 => {
     takerAssetBundle:  order.taker_asset_bundle,
   };
 };
+
+
+//
+//
+// export interface OfferItemModel {
+//   item_type: number
+//   token: string
+//   identifier_or_criteria: string
+//   startAmount: number
+//   endAmount: number
+// }
+//
+// export interface OfferModel {
+//   offer_item: OfferItemModel
+// }
+//
+// export interface ConsiderationItemModel extends OfferItemModel {
+//   recipient: string
+// }
+//
+// export interface ConsiderationModel {
+//   consideration_item: ConsiderationItemModel
+// }
+//
+//
+// export type OrderParametersModel = {
+//   offerer: string
+//   zone: string
+//   zone_hash: string
+//   start_time: number
+//   end_time: number
+//   order_type: number
+//   salt: string
+//   conduitKey: string
+//   nonce: string,
+//   offer: OfferItemModel[],
+//   consideration: ConsiderationItemModel[]
+// }
+//
+// export function converToPost(order: OrderParameters): OrderParametersModel {
+//
+//   // const {parameters: order_parameters, signature} = order721
+//   const {offerer, zone, zoneHash, startTime, endTime, orderType, salt, conduitKey, offer, consideration} = order
+//   const offerItem: OfferItemModel[] = offer.map((val: OfferItem) => ({
+//     item_type: val.itemType,
+//     token: val.token,
+//     identifier_or_criteria: val.identifierOrCriteria,
+//     startAmount: Number(val.startAmount),
+//     endAmount: Number(val.endAmount)
+//   }))
+//   const considerationItme: ConsiderationItemModel[] = consideration.map((val: ConsiderationItem) => ({
+//     item_type: val.itemType,
+//     token: val.token,
+//     identifier_or_criteria: val.identifierOrCriteria,
+//     startAmount: Number(val.startAmount),
+//     endAmount: Number(val.endAmount),
+//     recipient: val.recipient
+//   }))
+//   return {
+//     offerer,
+//     zone,
+//     zone_hash: zoneHash,
+//     start_time: Number(startTime),
+//     end_time: Number(endTime),
+//     order_type: orderType,
+//     salt,
+//     conduitKey,
+//     nonce: "0",
+//     offer: offerItem,
+//     consideration: considerationItme
+//   }
+// }
+

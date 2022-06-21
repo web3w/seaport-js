@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import { getMaximumSizeForOrder, isCurrencyItem } from "./item";
 import { MerkleTree } from "./merkletree";
+import {OrderStatus} from "../types";
 
 const multiplyBasisPoints = (amount: BigNumberish, basisPoints: BigNumberish) =>
   BigNumber.from(amount)
@@ -276,3 +277,25 @@ export const generateRandomSalt = () => {
 };
 
 export const shouldUseMatchForFulfill = () => true;
+
+export function validateAndSanitizeFromOrderStatus(
+    order: Order,
+    orderStatus: OrderStatus
+): Order {
+  const {isValidated, isCancelled, totalFilled, totalSize} = orderStatus;
+
+  if (totalSize.gt(0) && totalFilled.div(totalSize).eq(1)) {
+    throw new Error("The order you are trying to fulfill is already filled");
+  }
+
+  if (isCancelled) {
+    throw new Error("The order you are trying to fulfill is cancelled");
+  }
+
+  if (isValidated) {
+    // If the order is already validated, manually wipe the signature off of the order to save gas
+    return {parameters: {...order.parameters}, signature: "0x"};
+  }
+
+  return order;
+}

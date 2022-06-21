@@ -128,9 +128,7 @@ export const getSummedTokenAndIdentifierAmounts = ({
  * prior to determining the current price. This ensures that cleanly divisible amounts can be chosen when
  * constructing the order without a dependency on the time when the order is ultimately fulfilled.
  */
-export const getMaximumSizeForOrder = ({
-  parameters: { offer, consideration },
-}: Order) => {
+export const getMaximumSizeForOrder = ({parameters: { offer, consideration }}: Order) => {
   const allItems = [...offer, ...consideration];
 
   const amounts = allItems.flatMap(({ startAmount, endAmount }) => [
