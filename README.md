@@ -1,8 +1,6 @@
 # seaport-js<!-- omit in toc -->
 
-SDK for the Seaport protocol v1.1
-
-[Open-js Doc](https://github.com/ProjectOpenSea/opensea-js)
+SDK for the Seaport protocol v1.1 
 
 ## Installation
 
