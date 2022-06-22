@@ -252,6 +252,11 @@ const orders = await seaport.api.getOrders({side: OrderSide.Sell, ...})
 const tx = await seaport.fulfillOrder(JSON.stringify(orders[0]))
 console.log(tx.hash)
 await tx.wait()
+
+const orderList = [{orderStr: JSON.stringify(order[0])}, {orderStr: JSON.stringify(order[0])}]
+const res = await sdk.fulfillOrders({orderList})
+console.log(res.hash)
+await res.wait()
 ```
 
 Note that the `fulfillOrder` promise resolves when the transaction has been confirmed and mined to the blockchain. To

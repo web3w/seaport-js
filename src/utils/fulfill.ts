@@ -1,92 +1,29 @@
 import {
     BigNumber,
-    BigNumberish, Contract,
-    ContractTransaction,
+    BigNumberish,
     ethers,
-    providers,
 } from "ethers";
-import {BasicOrderRouteType, ItemType, MAX_INT, NO_CONDUIT} from "../constants";
+import {ItemType} from "../constants";
 import type {
-    AdvancedOrder,
-    ConsiderationItem,
-    ExchangeAction,
-    InputCriteria,
     Order,
     OrderParameters,
     OrderStatus,
-    InsufficientApprovals, FulfillOrdersMetadata,
+    FulfillOrdersMetadata,
 } from "../types";
-import {generateCriteriaResolvers, getItemToCriteriaMap} from "./criteria";
+import { getItemToCriteriaMap} from "./criteria";
 import {gcd} from "./gcd";
 import {
     getMaximumSizeForOrder,
-    getSummedTokenAndIdentifierAmounts,
     isCriteriaItem,
-    isCurrencyItem, isErc1155Item,
+    isCurrencyItem,
     isErc721Item,
     isNativeCurrencyItem,
-    TimeBasedItemParams,
 } from "./item";
 import {
     areAllCurrenciesSame,
-    mapOrderAmountsFromFilledStatus,
-    mapOrderAmountsFromUnitsToFill,
-    totalItemsAmount, validateAndSanitizeFromOrderStatus,
+    totalItemsAmount,
 } from "./order";
-import {executeAllActions, getTransactionMethods} from "./usecase";
-import {validateStandardFulfillBalancesAndApprovals} from "./balanceAndApprovalCheck";
-import {ERC721ABI, ERC20ABI} from "web3-abi-coder";
 
-/**
- * Get approval actions given a list of insufficent approvals.
- */
-export function getApprovalActions(
-    insufficientApprovals: InsufficientApprovals,
-    signer: providers.JsonRpcSigner
-): Promise<any> {
-    return Promise.all(
-        insufficientApprovals
-            .filter(
-                (approval, index) =>
-                    index === insufficientApprovals.length - 1 ||
-                    insufficientApprovals[index + 1].token !== approval.token
-            )
-            .map(async ({token, operator, itemType, identifierOrCriteria}) => {
-                if (isErc721Item(itemType) || isErc1155Item(itemType)) {
-                    // setApprovalForAll check is the same for both ERC721 and ERC1155, defaulting to ERC721
-                    const contract = new Contract(token, ERC721ABI, signer);
-
-                    return {
-                        type: "approval",
-                        token,
-                        identifierOrCriteria,
-                        itemType,
-                        operator,
-                        transactionMethods: getTransactionMethods(
-                            contract.connect(signer),
-                            "setApprovalForAll",
-                            [operator, true]
-                        ),
-                    };
-                } else {
-                    const contract = new Contract(token, ERC20ABI, signer);
-
-                    return {
-                        type: "approval",
-                        token,
-                        identifierOrCriteria,
-                        itemType,
-                        transactionMethods: getTransactionMethods(
-                            contract.connect(signer),
-                            "approve",
-                            [operator, MAX_INT]
-                        ),
-                        operator,
-                    };
-                }
-            })
-    );
-}
 
 /**
  * We should use basic fulfill order if the order adheres to the following criteria:
@@ -200,377 +137,6 @@ export const shouldUseBasicFulfill = (
 };
 
 
-
-export async function fulfillStandardOrder({
-                                               order,
-                                               unitsToFill = 0,
-                                               totalSize,
-                                               totalFilled,
-                                               offerCriteria,
-                                               considerationCriteria,
-                                               tips = [],
-                                               extraData,
-                                               seaportContract,
-                                               offererBalancesAndApprovals,
-                                               fulfillerBalancesAndApprovals,
-                                               offererOperator,
-                                               fulfillerOperator,
-                                               timeBasedItemParams,
-                                               conduitKey,
-                                               recipientAddress,
-                                               signer,
-                                           }: {
-    order: Order;
-    unitsToFill?: BigNumberish;
-    totalFilled: BigNumber;
-    totalSize: BigNumber;
-    offerCriteria: InputCriteria[];
-    considerationCriteria: InputCriteria[];
-    tips?: ConsiderationItem[];
-    extraData?: string;
-    seaportContract: any;
-    offererBalancesAndApprovals: any;
-    fulfillerBalancesAndApprovals: any;
-    offererOperator: string;
-    fulfillerOperator: string;
-    conduitKey: string;
-    recipientAddress: string;
-    timeBasedItemParams: TimeBasedItemParams;
-    signer: providers.JsonRpcSigner;
-}): Promise<any> {
-    // If we are supplying units to fill, we adjust the order by the minimum of the amount to fill and
-    // the remaining order left to be fulfilled
-    const orderWithAdjustedFills = unitsToFill
-        ? mapOrderAmountsFromUnitsToFill(order, {
-            unitsToFill,
-            totalFilled,
-            totalSize,
-        })
-        : // Else, we adjust the order by the remaining order left to be fulfilled
-        mapOrderAmountsFromFilledStatus(order, {
-            totalFilled,
-            totalSize,
-        });
-
-    const {
-        parameters: {offer, consideration},
-    } = orderWithAdjustedFills;
-
-    const considerationIncludingTips = [...consideration, ...tips];
-
-    const offerCriteriaItems = offer.filter(({itemType}) =>
-        isCriteriaItem(itemType)
-    );
-
-    const considerationCriteriaItems = considerationIncludingTips.filter(
-        ({itemType}) => isCriteriaItem(itemType)
-    );
-
-    const hasCriteriaItems =
-        offerCriteriaItems.length > 0 || considerationCriteriaItems.length > 0;
-
-    if (
-        offerCriteriaItems.length !== offerCriteria.length ||
-        considerationCriteriaItems.length !== considerationCriteria.length
-    ) {
-        throw new Error(
-            "You must supply the appropriate criterias for criteria based items"
-        );
-    }
-
-    const totalNativeAmount = getSummedTokenAndIdentifierAmounts({
-        items: considerationIncludingTips,
-        criterias: considerationCriteria,
-        timeBasedItemParams: {
-            ...timeBasedItemParams,
-            isConsiderationItem: true,
-        },
-    })[ethers.constants.AddressZero]?.["0"];
-
-    const insufficientApprovals = validateStandardFulfillBalancesAndApprovals({
-        offer,
-        consideration: considerationIncludingTips,
-        offerCriteria,
-        considerationCriteria,
-        offererBalancesAndApprovals,
-        fulfillerBalancesAndApprovals,
-        timeBasedItemParams,
-        offererOperator,
-        fulfillerOperator,
-    });
-
-    const payableOverrides = {value: totalNativeAmount};
-
-    const approvalActions = await getApprovalActions(
-        insufficientApprovals,
-        signer
-    );
-
-    const isGift = recipientAddress !== ethers.constants.AddressZero;
-
-    const useAdvanced = Boolean(unitsToFill) || hasCriteriaItems || isGift;
-
-    const orderAccountingForTips = {
-        ...order,
-        parameters: {
-            ...order.parameters,
-            consideration: [...order.parameters.consideration, ...tips],
-            totalOriginalConsiderationItems: consideration.length,
-        },
-    };
-
-    const {numerator, denominator} = getAdvancedOrderNumeratorDenominator(
-        order,
-        unitsToFill
-    );
-
-    const exchangeAction = {
-        type: "exchange",
-        transactionMethods: useAdvanced
-            ? getTransactionMethods(
-                seaportContract.connect(signer),
-                "fulfillAdvancedOrder",
-                [
-                    {
-                        ...orderAccountingForTips,
-                        numerator,
-                        denominator,
-                        extraData: extraData ?? "0x",
-                    },
-                    hasCriteriaItems
-                        ? generateCriteriaResolvers({
-                            orders: [order],
-                            offerCriterias: [offerCriteria],
-                            considerationCriterias: [considerationCriteria],
-                        })
-                        : [],
-                    conduitKey,
-                    recipientAddress,
-                    payableOverrides,
-                ]
-            )
-            : getTransactionMethods(seaportContract.connect(signer), "fulfillOrder", [
-                orderAccountingForTips,
-                conduitKey,
-                payableOverrides,
-            ]),
-    } as const;
-
-    const actions = [...approvalActions, exchangeAction] as const;
-
-    return {
-        actions,
-        executeAllActions: () =>
-            executeAllActions(actions) as Promise<ContractTransaction>,
-    };
-}
-
-
-
-export async function fulfillAvailableOrders({
-                                                 ordersMetadata,
-                                                 seaportContract,
-                                                 fulfillerBalancesAndApprovals,
-                                                 fulfillerOperator,
-                                                 currentBlockTimestamp,
-                                                 ascendingAmountTimestampBuffer,
-                                                 conduitKey,
-                                                 signer,
-                                                 recipientAddress,
-                                             }: {
-    ordersMetadata: FulfillOrdersMetadata;
-    seaportContract: any;
-    fulfillerBalancesAndApprovals: any;
-    fulfillerOperator: string;
-    currentBlockTimestamp: number;
-    ascendingAmountTimestampBuffer: number;
-    conduitKey: string;
-    signer: providers.JsonRpcSigner;
-    recipientAddress: string;
-}): Promise<any> {
-    const sanitizedOrdersMetadata = ordersMetadata.map((orderMetadata) => ({
-        ...orderMetadata,
-        order: validateAndSanitizeFromOrderStatus(
-            orderMetadata.order,
-            orderMetadata.orderStatus
-        ),
-    }));
-
-    const ordersMetadataWithAdjustedFills = sanitizedOrdersMetadata.map(
-        (orderMetadata) => ({
-            ...orderMetadata,
-            // If we are supplying units to fill, we adjust the order by the minimum of the amount to fill and
-            // the remaining order left to be fulfilled
-            order: orderMetadata.unitsToFill
-                ? mapOrderAmountsFromUnitsToFill(orderMetadata.order, {
-                    unitsToFill: orderMetadata.unitsToFill,
-                    totalFilled: orderMetadata.orderStatus.totalFilled,
-                    totalSize: orderMetadata.orderStatus.totalSize,
-                })
-                : // Else, we adjust the order by the remaining order left to be fulfilled
-                mapOrderAmountsFromFilledStatus(orderMetadata.order, {
-                    totalFilled: orderMetadata.orderStatus.totalFilled,
-                    totalSize: orderMetadata.orderStatus.totalSize,
-                }),
-        })
-    );
-
-    let totalNativeAmount = BigNumber.from(0);
-    const totalInsufficientApprovals: InsufficientApprovals = [];
-    const hasCriteriaItems = false;
-
-    const addApprovalIfNeeded = (
-        orderInsufficientApprovals: InsufficientApprovals
-    ) => {
-        orderInsufficientApprovals.forEach((insufficientApproval) => {
-            if (
-                !totalInsufficientApprovals.find(
-                    (approval) => approval.token === insufficientApproval.token
-                )
-            ) {
-                totalInsufficientApprovals.push(insufficientApproval);
-            }
-        });
-    };
-
-    ordersMetadataWithAdjustedFills.forEach(
-        ({
-             order,
-             tips,
-             offerCriteria,
-             considerationCriteria,
-             offererBalancesAndApprovals,
-             offererOperator,
-         }) => {
-            const considerationIncludingTips = [
-                ...order.parameters.consideration,
-                ...tips,
-            ];
-
-            const timeBasedItemParams = {
-                startTime: order.parameters.startTime,
-                endTime: order.parameters.endTime,
-                currentBlockTimestamp,
-                ascendingAmountTimestampBuffer,
-                isConsiderationItem: true,
-            };
-
-            totalNativeAmount = totalNativeAmount.add(
-                getSummedTokenAndIdentifierAmounts({
-                    items: considerationIncludingTips,
-                    criterias: considerationCriteria,
-                    timeBasedItemParams,
-                })[ethers.constants.AddressZero]?.["0"] ?? BigNumber.from(0)
-            );
-
-            const insufficientApprovals = validateStandardFulfillBalancesAndApprovals(
-                {
-                    offer: order.parameters.offer,
-                    consideration: considerationIncludingTips,
-                    offerCriteria,
-                    considerationCriteria,
-                    offererBalancesAndApprovals,
-                    fulfillerBalancesAndApprovals,
-                    timeBasedItemParams,
-                    offererOperator,
-                    fulfillerOperator,
-                }
-            );
-
-            const offerCriteriaItems = order.parameters.offer.filter(({itemType}) =>
-                isCriteriaItem(itemType)
-            );
-
-            const considerationCriteriaItems = considerationIncludingTips.filter(
-                ({itemType}) => isCriteriaItem(itemType)
-            );
-
-            if (
-                offerCriteriaItems.length !== offerCriteria.length ||
-                considerationCriteriaItems.length !== considerationCriteria.length
-            ) {
-                throw new Error(
-                    "You must supply the appropriate criterias for criteria based items"
-                );
-            }
-
-            addApprovalIfNeeded(insufficientApprovals);
-        }
-    );
-
-    const payableOverrides = {value: totalNativeAmount};
-
-    const approvalActions = await getApprovalActions(
-        totalInsufficientApprovals,
-        signer
-    );
-
-    const advancedOrdersWithTips: AdvancedOrder[] = sanitizedOrdersMetadata.map(
-        ({order, unitsToFill = 0, tips, extraData}) => {
-            const {numerator, denominator} = getAdvancedOrderNumeratorDenominator(
-                order,
-                unitsToFill
-            );
-
-            const considerationIncludingTips = [
-                ...order.parameters.consideration,
-                ...tips,
-            ];
-            return {
-                ...order,
-                parameters: {
-                    ...order.parameters,
-                    consideration: considerationIncludingTips,
-                    totalOriginalConsiderationItems:
-                    order.parameters.consideration.length,
-                },
-                numerator,
-                denominator,
-                extraData,
-            };
-        }
-    );
-
-    const {offerFulfillments, considerationFulfillments} =
-        generateFulfillOrdersFulfillments(ordersMetadata);
-
-    const exchangeAction = {
-        type: "exchange",
-        transactionMethods: getTransactionMethods(
-            seaportContract.connect(signer),
-            "fulfillAvailableAdvancedOrders",
-            [
-                advancedOrdersWithTips,
-                hasCriteriaItems
-                    ? generateCriteriaResolvers({
-                        orders: ordersMetadata.map(({order}) => order),
-                        offerCriterias: ordersMetadata.map(
-                            ({offerCriteria}) => offerCriteria
-                        ),
-                        considerationCriterias: ordersMetadata.map(
-                            ({considerationCriteria}) => considerationCriteria
-                        ),
-                    })
-                    : [],
-                offerFulfillments,
-                considerationFulfillments,
-                conduitKey,
-                recipientAddress,
-                advancedOrdersWithTips.length,
-                payableOverrides,
-            ]
-        ),
-    } as const;
-
-    const actions = [...approvalActions, exchangeAction] as const;
-
-    return {
-        actions,
-        executeAllActions: () =>
-            executeAllActions(actions) as Promise<ContractTransaction>,
-    };
-}
-
 export function generateFulfillOrdersFulfillments(
     ordersMetadata: FulfillOrdersMetadata
 ): {
@@ -589,14 +155,11 @@ export function generateFulfillOrdersFulfillments(
         identifier: string;
     }) => `${sourceOrDestination}-${operator}-${token}-${identifier}`;
 
-    const offerAggregatedFulfillments: Record<string,
-        any> = {};
+    const offerAggregatedFulfillments: Record<string, any> = {};
 
-    const considerationAggregatedFulfillments: Record<string,
-        any> = {};
+    const considerationAggregatedFulfillments: Record<string, any> = {};
 
-    ordersMetadata.forEach(
-        ({order, offererOperator, offerCriteria}, orderIndex) => {
+    ordersMetadata.forEach(({order, offererOperator, offerCriteria}, orderIndex) => {
             const itemToCriteria = getItemToCriteriaMap(
                 order.parameters.offer,
                 offerCriteria
@@ -620,8 +183,7 @@ export function generateFulfillOrdersFulfillments(
         }
     );
 
-    ordersMetadata.forEach(
-        ({order, considerationCriteria, tips}, orderIndex) => {
+    ordersMetadata.forEach(({order, considerationCriteria, tips}, orderIndex) => {
             const itemToCriteria = getItemToCriteriaMap(
                 order.parameters.consideration,
                 considerationCriteria
@@ -631,8 +193,7 @@ export function generateFulfillOrdersFulfillments(
                     const aggregateKey = `${hashAggregateKey({
                         sourceOrDestination: item.recipient,
                         token: item.token,
-                        identifier:
-                            itemToCriteria.get(item)?.identifier ?? item.identifierOrCriteria,
+                        identifier:itemToCriteria.get(item)?.identifier ?? item.identifierOrCriteria,
                         // We tack on the index to ensure that erc721s can never be aggregated and instead must be in separate arrays
                     })}${isErc721Item(item.itemType) ? itemIndex : ""}`;
 
@@ -647,9 +208,7 @@ export function generateFulfillOrdersFulfillments(
 
     return {
         offerFulfillments: Object.values(offerAggregatedFulfillments),
-        considerationFulfillments: Object.values(
-            considerationAggregatedFulfillments
-        ),
+        considerationFulfillments: Object.values(considerationAggregatedFulfillments),
     };
 }
 

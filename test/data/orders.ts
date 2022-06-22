@@ -1,5 +1,19 @@
 import {OrderWithCounter} from "../../src/types";
 
+export const apiConfig = {
+    1: {
+        proxyUrl: 'http://127.0.0.1:7890',
+        apiTimeout: 20000,
+        protocolFeePoints: 250
+    },
+    4: {
+        proxyUrl: 'http://127.0.0.1:7890',
+        apiTimeout: 20000,
+        protocolFeePoints: 250
+    }
+}
+
+
 export const gemOrder ={
     "parameters":{
         "offerer":"0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087",

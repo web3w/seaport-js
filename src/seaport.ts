@@ -29,7 +29,7 @@ import {
 import {BigNumber} from "ethers";
 import {
     AdvancedOrder,
-    ConsiderationItem, FulfillOrdersMetadata, InsufficientApprovals,
+    ConsiderationItem, FulfillOrdersMetadata, InputCriteria, InsufficientApprovals,
     OfferItem,
     Order,
     OrderComponents,
@@ -52,7 +52,6 @@ import {
 } from "./constants";
 import {generateCriteriaResolvers} from "./utils/criteria";
 import {
-    getMaximumSizeForOrder,
     getSummedTokenAndIdentifierAmounts,
     isCriteriaItem,
     TimeBasedItemParams
@@ -62,7 +61,7 @@ import {
     mapOrderAmountsFromUnitsToFill,
     validateAndSanitizeFromOrderStatus
 } from "./utils/order";
-import {getTransactionMethods} from "./utils/usecase";
+import {generateFulfillOrdersFulfillments, getAdvancedOrderNumeratorDenominator} from "./utils/fulfill";
 
 export function computeFees(recipients: { address: string, points: number }[],
                             tokenTotal: BigNumber,
@@ -236,8 +235,8 @@ export class Seaport extends EventEmitter {
         }
 
         const orderType = OrderType.FULL_RESTRICTED
-        const startTime = listingTime || Math.round(Date.now() / 1000)
-        const endTime = expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7)
+        const startTime = (listingTime || Math.round(Date.now() / 1000)).toString()
+        const endTime = (expirationTime || Math.round(Date.now() / 1000 + 60 * 60 * 24 * 7)).toString()
         const conduitKey = await this.conduitController.getKey(this.conduit.address)
 
         let zone = this.pausableZoneAddress // ethers.constants.AddressZero
@@ -429,25 +428,15 @@ export class Seaport extends EventEmitter {
                                                     tips = [],
                                                 }: {
         orders: Order[]
-        takerAmount: string
+        takerAmount?: string
         recipient?: string
         tips?: ConsiderationItem[]
     }) {
-        // 1. advancedOrders:OrderWithCounter []
-        // 2 "criteriaResolvers": [],
-        // 3  "offerFulfillments":
-        // 4  "considerationFulfillments":
-        // 5  "fulfillerConduitKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        // 6  "recipient": "0x57c17FdC47720D3c56cfB0C3Ded460267BCD642D",
-        // 7   "maximumFulfilled": "1"
-
-
-        const advancedOrdersWithTips: AdvancedOrder[] = []
+        const ordersMetadata: FulfillOrdersMetadata = []
 
         const offers: OfferItem[] = [], considerations: ConsiderationItem[] = []
 
         let totalNativeAmount = BigNumber.from(0);
-        const ordersMetadata: FulfillOrdersMetadata = []
         for (const order of orders) {
 
             const {parameters} = order
@@ -460,6 +449,17 @@ export class Seaport extends EventEmitter {
                 ? mapOrderAmountsFromUnitsToFill(order, {unitsToFill: takerAmount, totalFilled, totalSize})
                 : mapOrderAmountsFromFilledStatus(order, {totalFilled, totalSize});
             const {parameters: {offer, consideration}} = orderWithAdjustedFills;
+            const orderMetadata = {
+                order,
+                orderStatus,
+                offerCriteria: [],
+                considerationCriteria: [],
+                tips: [],
+                extraData: "0x",
+                offererBalancesAndApprovals: "",
+                offererOperator: ""
+            }
+            ordersMetadata.push(orderMetadata)
             offers.push(...offer)
             considerations.push(...consideration)
 
@@ -486,6 +486,33 @@ export class Seaport extends EventEmitter {
             );
         }
 
+        //1
+        const advancedOrdersWithTips: AdvancedOrder[] = ordersMetadata.map(
+            ({order, unitsToFill = 0, tips, extraData}) => {
+                const {numerator, denominator} = getAdvancedOrderNumeratorDenominator(
+                    order,
+                    unitsToFill
+                );
+
+                const considerationIncludingTips = [
+                    ...order.parameters.consideration,
+                    ...tips,
+                ];
+                return {
+                    ...order,
+                    parameters: {
+                        ...order.parameters,
+                        consideration: considerationIncludingTips,
+                        totalOriginalConsiderationItems:
+                        order.parameters.consideration.length,
+                    },
+                    numerator,
+                    denominator,
+                    extraData,
+                };
+            }
+        );
+
         const considerationIncludingTips = [...considerations, ...tips];
 
         const offerCriteriaItems = offers.filter(({itemType}) => isCriteriaItem(itemType));
@@ -497,15 +524,19 @@ export class Seaport extends EventEmitter {
         //2.criteriaResolvers:CriteriaResolver[]
         const criteriaResolvers = hasCriteriaItems ? generateCriteriaResolvers({orders}) : []
 
-        //
-        const payableOverrides = {value: totalNativeAmount};
-
+        // 3 4
+        const {offerFulfillments, considerationFulfillments} = generateFulfillOrdersFulfillments(ordersMetadata);
+        // 5
         const fulfillerConduitKey = "0x0000000000000000000000000000000000000000000000000000000000000000"
-        const offerFulfillments = []
-        const considerationFulfillments = []
-        return this.seaport.populateTransaction.fulfillAvailableAdvancedOrders(advancedOrdersWithTips, criteriaResolvers,
+        // 6
+        recipient = recipient || this.walletInfo.address
+        // 7
+        const maximumFulfilled = advancedOrdersWithTips.length
+        const payableOverrides = {value: totalNativeAmount};
+        return this.seaport.populateTransaction.fulfillAvailableAdvancedOrders(
+            advancedOrdersWithTips, criteriaResolvers,
             offerFulfillments, considerationFulfillments,
-            fulfillerConduitKey, recipient, advancedOrdersWithTips.length, payableOverrides)
+            fulfillerConduitKey, recipient, maximumFulfilled, payableOverrides)
     }
 
     public async fulfillAdvancedOrder({
@@ -738,8 +769,8 @@ export class Seaport extends EventEmitter {
      * This saves us RPC calls and latency.
      */
     public getOrderHash(orderParameters: OrderParameters): string {
-        return this.seaport.getOrderHash(orderParameters)
-        // return getEIP712StructHash(EIP_712_PRIMARY_TYPE, EIP_712_ORDER_TYPE, orderComponents as any)
+        // return this.seaport.getOrderHash(orderParameters)
+        return getEIP712StructHash(EIP_712_PRIMARY_TYPE, EIP_712_ORDER_TYPE, orderParameters as any)
 
     }
 

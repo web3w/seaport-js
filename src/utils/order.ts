@@ -276,7 +276,6 @@ export const generateRandomSalt = () => {
   return `0x${Buffer.from(ethers.utils.randomBytes(16)).toString("hex")}`;
 };
 
-export const shouldUseMatchForFulfill = () => true;
 
 export function validateAndSanitizeFromOrderStatus(
     order: Order,

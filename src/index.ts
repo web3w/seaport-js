@@ -57,7 +57,10 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     }
 
     async fulfillOrder(orderStr: string, options?: MatchOrderOption) {
-        const order = JSON.parse(orderStr) as Order
+        let order = JSON.parse(orderStr)
+        if (order.protocolData) {
+            order = order.protocolData
+        }
         if (!validateOrder(order)) throw validateOrder.errors
 
         const {takerAmount, taker} = options || {}
@@ -71,22 +74,31 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     }
 
     async fulfillOrders(orders: MatchOrdersParams) {
-        const {orderList, mixedPayment} = orders
+        const {orderList} = orders
         if (orderList.length == 0) {
-            throw 'Seapotr fulfill orders eq 0'
+            throw 'Seaport fulfill orders eq 0'
         }
-
         if (orderList.length == 1) {
             const {orderStr, metadata, takerAmount, taker} = orderList[0]
             const oneOption: MatchOrderOption = {
                 metadata,
                 takerAmount,
-                taker,
-                mixedPayment
+                taker
             }
             return this.fulfillOrder(orderStr, oneOption)
         } else {
-            // return this.fulfillAvailableAdvancedOrders()
+            const availableOrders: Order[] = []
+            for (const {orderStr} of orderList) {
+                let order = JSON.parse(orderStr)
+                if (order.protocolData) {
+                    order = order.protocolData
+                }
+                if (!validateOrder(order)) throw validateOrder.errors
+                availableOrders.push(order)
+            }
+            const data = await this.contracts.fulfillAvailableAdvancedOrders({orders: availableOrders})
+
+            return this.contracts.ethSend(transactionToCallData(data))
         }
 
     }

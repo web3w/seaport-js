@@ -1,6 +1,3 @@
-const HtmlWebpackPlugin = require('html-webpack-plugin')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
-const {CleanWebpackPlugin} = require('clean-webpack-plugin')
 const webpack = require('webpack')
 //
 // plugins: [
@@ -17,7 +14,7 @@ module.exports = {
         ignored: ['**/node_modules']
     },
     mode: 'development',
-    entry: ['./index.ts', './page/app.jsx'],
+    entry: ['./index.ts'],
     module: {
         rules: [
             {
@@ -108,7 +105,6 @@ module.exports = {
         libraryTarget: 'umd'
     },
     plugins: [
-        new CleanWebpackPlugin(),
         // Only update what has changed on hot reload
         new webpack.HotModuleReplacementPlugin(),
         new webpack.ProvidePlugin({
@@ -116,12 +112,7 @@ module.exports = {
         }),
         new webpack.ProvidePlugin({
             process: 'process/browser'
-        }),
-        new HtmlWebpackPlugin({
-            title: 'Wallet SDK',
-            template: './page/index.html'
-        }),
-        new CopyWebpackPlugin({patterns: [{from: './page/js', to: './js'}]})
+        })
     ]
 
 }

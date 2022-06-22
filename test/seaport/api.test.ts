@@ -39,6 +39,15 @@ const apiConfig = {
             const asset = await sdk.getAssets(tokens)
             console.log(asset)
 
+            const query = {
+                asset_contract_address: '0x5fecbbbaf9f3126043a48a35eb2eb8667d469d53', //
+                token_ids: ['8001'],
+                side: OrderSide.All
+            }
+            const {orders} = await sdk.getOrders(query)
+            console.log(orders)
+
+
         } catch (e) {
             console.log(e)
         }
