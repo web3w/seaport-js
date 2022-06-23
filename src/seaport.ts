@@ -164,9 +164,9 @@ export class Seaport extends EventEmitter {
     public async getOrderApprove({
                                      asset,
                                      quantity = 1,
-                                     paymentToken = NullToken,
+                                     paymentToken = this.GasWarpperToken,
                                      startAmount,
-                                 }: CreateOrderParams, side: OrderSide):Promise<ApproveInfo> {
+                                 }: CreateOrderParams, side: OrderSide): Promise<ApproveInfo> {
         const operator = this.conduit.address
         const decimals: number = paymentToken ? paymentToken.decimals : 18
         if (side == OrderSide.Sell) {
@@ -209,7 +209,7 @@ export class Seaport extends EventEmitter {
                     throw new Error("Offer amount less than balances")
                 }
                 if (ethers.BigNumber.from(offerAsset.endAmount).gt(allowance)) {
-                    approve = true
+                    approve = false
                     data = calldata
                 }
             } else {
@@ -221,8 +221,8 @@ export class Seaport extends EventEmitter {
                 if (ethers.BigNumber.from(offerAsset.endAmount).gt(balances)) {
                     throw new Error("Offer amount less than balances")
                 }
-                if (isApprove) {
-                    approve = true
+                if (!isApprove) {
+                    approve = false
                     data = calldata
                 }
             }
@@ -301,9 +301,10 @@ export class Seaport extends EventEmitter {
         }]
         const collection = asset.collection
         if (collection && collection.royaltyFeePoints && collection.royaltyFeeAddress) {
+            const {royaltyFeeAddress, royaltyFeePoints} = collection
             recipients.push({
-                address: collection.royaltyFeeAddress,
-                points: collection.royaltyFeePoints
+                address: royaltyFeeAddress,
+                points: royaltyFeePoints
             })
         }
 
@@ -335,8 +336,9 @@ export class Seaport extends EventEmitter {
             points: this.protocolFeePoints
         }]
 
-        const {collection: {royaltyFeePoints, royaltyFeeAddress}} = asset
-        if (asset.collection && royaltyFeePoints && royaltyFeeAddress) {
+        const {collection} = asset
+        if (collection && collection.royaltyFeePoints && collection.royaltyFeeAddress) {
+            const {royaltyFeeAddress, royaltyFeePoints} = collection
             recipients.push({
                 address: royaltyFeeAddress,
                 points: royaltyFeePoints

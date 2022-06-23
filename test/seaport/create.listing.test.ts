@@ -51,6 +51,7 @@ const apiConfig = {
             // const {orders} = await sdk.api.getOrders(query)
             // console.log(orders)
 
+
             const sellParams = {
                 "asset": {
                     "tokenId": "6136",
@@ -63,6 +64,7 @@ const apiConfig = {
                 },
                 "startAmount": 0.6
             } as SellOrderParams
+            const approve = await sdk.getOrderApprove(sellParams, OrderSide.Sell)
             const order = await sdk.createSellOrder(sellParams)
             // await sdk.contracts.checkOrderPost(JSON.stringify(order))
             const res = await sdk.api.postOrder(JSON.stringify(order))

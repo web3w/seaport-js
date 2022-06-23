@@ -1,5 +1,6 @@
 import {apiConfig, erc8001, gemOrder, order721} from "../data/orders";
 import {SeaportAPI} from "../../src/api/seaport";
+// @ts-ignore
 import * as secrets from '../../../secrets.json'
 import {OrderSide, SellOrderParams} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";

@@ -1,5 +1,6 @@
 
 import {SeaportSDK} from "../../src/index";
+// @ts-ignore
 import * as secrets from '../../../secrets.json'
 import {getEIP712StructHash} from "web3-wallets";
 import {EIP_712_ORDER_TYPE, EIP_712_PRIMARY_TYPE} from "../../src/constants";

@@ -1,6 +1,6 @@
 // @ts-ignore
 import * as secrets from '../../../secrets.json'
-import {BuyOrderParams} from "web3-accounts";
+import {BuyOrderParams, OrderSide} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";
 
 const buyer = '0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401'
@@ -44,14 +44,15 @@ const apiConfig = {
                 "startAmount": 0.002
             } as BuyOrderParams
 
+            const apporve = await sdk.getOrderApprove(buyParams,OrderSide.Buy)
             const order = await sdk.createBuyOrder(buyParams)
             // console.log(order)
-            // const res = await sdk.api.postOrder(JSON.stringify(order))
-            // console.log(res)
+            const res = await sdk.api.postOrder(JSON.stringify(order))
+            console.log(res)
 
-            const tx = await sdk.fulfillOrder(JSON.stringify(order))
-            await tx.wait()
-            console.log(tx.hash)
+            // const tx = await sdk.fulfillOrder(JSON.stringify(order))
+            // await tx.wait()
+            // console.log(tx.hash)
 
         } catch (e) {
             console.log(e)
