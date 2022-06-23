@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import * as secrets from '../../../secrets.json'
 import {ETHToken, OrderSide, SellOrderParams, transactionToCallData} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";

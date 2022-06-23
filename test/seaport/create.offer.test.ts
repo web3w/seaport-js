@@ -1,3 +1,4 @@
+// @ts-ignore
 import * as secrets from '../../../secrets.json'
 import {BuyOrderParams} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";

@@ -1,4 +1,6 @@
 import {apiConfig, erc8001, gemOrder, order721} from "../data/orders";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import * as secrets from '../../../secrets.json'
 import {OrderSide, SellOrderParams} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";

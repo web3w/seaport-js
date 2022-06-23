@@ -150,8 +150,8 @@ export class SeaportAPI extends BaseFetch {
             // const orderSide = side == OrderSide.Buy ? 'offers' : 'listings'
             const apiPath = `/v2/orders/${this.chainPath}/seaport/${sidePath}`
 
-            console.log(`${this.apiBaseUrl}${apiPath}`)
-            console.log(order)
+            // console.log(`${this.apiBaseUrl}${apiPath}`)
+            // console.log(order)
             // console.log(signature)
             const result = await this.post(
                 apiPath,

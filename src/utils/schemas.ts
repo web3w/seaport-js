@@ -1,23 +1,14 @@
-import Ajv, {JSONSchemaType, ValidateFunction} from "ajv";
+//
+import {Web3Assert,Schema} from "web3-assert";
 
-import {OrderFee, OrderV2} from "../api/types";
-import {
-    ConsiderationItem,
-    OfferItem,
-    OpenSeaAccount,
-    OpenSeaUser, Order,
-    OrderComponents, OrderParameters,
-    OrderWithCounter
-} from "../types";
-
-const userSchema: JSONSchemaType<OpenSeaUser> = {
+const userSchema = {
     type: "object",
     properties: {
         username: {type: "string", nullable: true},
     },
 };
 
-const accountSchema: JSONSchemaType<OpenSeaAccount> = {
+const accountSchema = {
     type: "object",
     properties: {
         address: {type: "string"},
@@ -28,7 +19,7 @@ const accountSchema: JSONSchemaType<OpenSeaAccount> = {
     required: ["address", "config", "profileImgUrl", "user"],
 };
 
-const feeSchema: JSONSchemaType<OrderFee> = {
+const feeSchema = {
     type: "object",
     properties: {
         account: accountSchema,
@@ -37,14 +28,13 @@ const feeSchema: JSONSchemaType<OrderFee> = {
     required: ["account", "basisPoints"],
 };
 
-type PartialOrderV2Type = Omit<OrderV2,
-    "makerAssetBundle" | "takerAssetBundle" | "protocolData"> & {
-    makerAssetBundle: object;
-    takerAssetBundle: object;
-    protocolData: object;
-};
+// type PartialOrderV2Type = Omit<OrderV2,"makerAssetBundle" | "takerAssetBundle" | "protocolData"> & {
+//     makerAssetBundle: object;
+//     takerAssetBundle: object;
+//     protocolData: object;
+// };
 
-const orderV2Schema: JSONSchemaType<PartialOrderV2Type> = {
+const orderV2Schema = {
     type: "object",
     properties: {
         createdDate: {type: "string"},
@@ -90,7 +80,7 @@ const orderV2Schema: JSONSchemaType<PartialOrderV2Type> = {
     ],
 };
 
-const offerItemSchama: JSONSchemaType<OfferItem> = {
+const offerItemSchama = {
     type: "object",
     properties: {
         itemType: {
@@ -105,7 +95,7 @@ const offerItemSchama: JSONSchemaType<OfferItem> = {
     required: ["itemType", "token", "identifierOrCriteria", "startAmount", "endAmount"]
 }
 
-const considerationItemSchama: JSONSchemaType<ConsiderationItem> = {
+const considerationItemSchama = {
     type: "object",
     properties: {
         itemType: {
@@ -120,7 +110,7 @@ const considerationItemSchama: JSONSchemaType<ConsiderationItem> = {
     },
     required: ["itemType", "token", "identifierOrCriteria", "startAmount", "endAmount", "recipient"],
 }
-const orderComponentsSchama: JSONSchemaType<OrderComponents> = {
+const orderComponentsSchama = {
     type: "object",
     properties: {
         offerer: {type: "string"},
@@ -150,7 +140,7 @@ const orderComponentsSchama: JSONSchemaType<OrderComponents> = {
     ]
 }
 
-const orderParametersSchama: JSONSchemaType<OrderParameters> = {
+const orderParametersSchama = {
     type: "object",
     properties: {
         offerer: {type: "string"},
@@ -177,7 +167,7 @@ const orderParametersSchama: JSONSchemaType<OrderParameters> = {
         "conduitKey"
     ]
 }
-const orderWithCounterSchema: JSONSchemaType<OrderWithCounter> = {
+const orderWithCounterSchema = {
     type: "object",
     properties: {
         parameters: {...orderComponentsSchama, nullable: true},
@@ -189,7 +179,7 @@ const orderWithCounterSchema: JSONSchemaType<OrderWithCounter> = {
     ],
 };
 
-const orderSchema: JSONSchemaType<Order> = {
+const orderSchema = {
     type: "object",
     properties: {
         parameters: {...orderParametersSchama, nullable: true},
@@ -201,9 +191,8 @@ const orderSchema: JSONSchemaType<Order> = {
     ],
 };
 
-
-const ajv = new Ajv();
-export const validateOrderV2 = ajv.compile(orderV2Schema) as ValidateFunction<OrderV2>
-export const validateOrderWithCounter = ajv.compile(orderWithCounterSchema) as ValidateFunction<OrderWithCounter>
-export const validateOrder = ajv.compile(orderSchema) as ValidateFunction<OrderWithCounter>
+const assert = new Web3Assert()
+export const validateOrderV2 = assert.compile(orderV2Schema as Schema)
+export const validateOrderWithCounter = assert.compile(orderWithCounterSchema as Schema)
+export const validateOrder = assert.compile(orderSchema as Schema)
 //

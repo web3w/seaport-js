@@ -3,7 +3,7 @@ import EventEmitter from 'events'
 import {SEAPORT_CONTRACTS_ADDRESSES, SeaportABI} from './contracts/index'
 
 import {
-    APIConfig,
+    APIConfig, ApproveInfo,
     BuyOrderParams,
     CreateOrderParams,
     MatchParams,
@@ -166,7 +166,7 @@ export class Seaport extends EventEmitter {
                                      quantity = 1,
                                      paymentToken = NullToken,
                                      startAmount,
-                                 }: CreateOrderParams, side: OrderSide) {
+                                 }: CreateOrderParams, side: OrderSide):Promise<ApproveInfo> {
         const operator = this.conduit.address
         const decimals: number = paymentToken ? paymentToken.decimals : 18
         if (side == OrderSide.Sell) {
