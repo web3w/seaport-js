@@ -14,8 +14,10 @@ import {OPENSEA_API_TIMEOUT, OPENSEA_API_CONFIG, OPENSEA_API_KEY, CHAIN_PATH} fr
 import {OrderSide, BaseFetch} from "web3-accounts"
 import {ItemType} from "../constants";
 import {OrderV2} from "./types";
-import {validateOrderV2, validateOrderWithCounter} from "../utils/schemas";
 import {deserializeOrder} from "./utils";
+import {seaportAssert} from "../utils/assert";
+
+const {validateOrderV2, validateOrderWithCounter} = seaportAssert
 
 export class SeaportAPI extends BaseFetch {
     public chainPath: string

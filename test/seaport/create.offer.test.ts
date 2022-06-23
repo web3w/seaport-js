@@ -2,49 +2,34 @@
 import * as secrets from '../../../secrets.json'
 import {BuyOrderParams, OrderSide} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";
+import {apiConfig} from "../data/orders";
+import {openseaAssetToAsset} from "../../src/utils/order";
 
-const buyer = '0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401'
+const buyer = '0x32f4B63A46c1D12AD82cABC778D75aBF9889821a'
 
 
 const chainId = 4
-const apiConfig = {
-        1: {
-            proxyUrl: 'http://127.0.0.1:7890',
-            apiTimeout: 20000,
-            protocolFeePoints: 250
-        },
-        4: {
-            proxyUrl: 'http://127.0.0.1:7890',
-            apiTimeout: 20000,
-            protocolFeePoints: 250
-        }
-    }
-
 ;(async () => {
-
-        // if(!validateOrderWithCounter(erc8001)) console.log(validateOrderWithCounter.errors)
-        //, apiConfig[chainId]
         const sdk = new SeaportSDK({
             chainId,
             address: buyer,
             privateKeys: secrets.privateKeys
         }, apiConfig[chainId])
         try {
-            const asset = (await sdk.getOwnerAssets({limit: 2}))[1]
+            const openseaAsset = (await sdk.getOwnerAssets({limit: 1}))[0]
+            // const asset = openseaAssetToAsset(openseaAsset)
+            const asset = {
+                tokenId: '1',
+                tokenAddress: '0x13e4ccba895870d99e4e196ac1d4b678aea196be',
+                schemaName: 'ERC721'
+            }
+
             const buyParams = {
-                "asset": {
-                    "tokenId": asset.token_id,
-                    "tokenAddress": asset.address,
-                    "schemaName": asset.schema_name,
-                    "collection": {
-                        "royaltyFeePoints": asset.royaltyFeePoints,
-                        "royaltyFeeAddress": asset.royaltyFeeAddress
-                    }
-                },
+                asset,
                 "startAmount": 0.002
             } as BuyOrderParams
 
-            const apporve = await sdk.getOrderApprove(buyParams,OrderSide.Buy)
+            const apporve = await sdk.getOrderApprove(buyParams, OrderSide.Buy)
             const order = await sdk.createBuyOrder(buyParams)
             // console.log(order)
             const res = await sdk.api.postOrder(JSON.stringify(order))

@@ -1,5 +1,3 @@
-import {OrderWithCounter} from "../../src/types";
-
 export const apiConfig = {
     1: {
         proxyUrl: 'http://127.0.0.1:7890',
@@ -13,56 +11,75 @@ export const apiConfig = {
     }
 }
 
+export const asset721 = {
+    1: [
+        {
+            "tokenId": "6136",
+            "tokenAddress": "0x984ac9911c6839a6870a1040a5fb89dd66513bc5",
+            "schemaName": "ERC721",
+            "collection": {
+                "royaltyFeePoints": 500,
+                "royaltyFeeAddress": "0x545ed214984f3ec57fb6a614f2a6211f0481547f"
+            }
+        }
+    ],
+    4: [{
+        "tokenId": "73",
+        "tokenAddress": "0x3b06635c6429d0ffcbe3798b860d065118269cb7",
+        "schemaName": "ERC721"
+    }]
+}
 
-export const gemOrder ={
-    "parameters":{
-        "offerer":"0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087",
-        "offer":[
+
+export const gemOrder = {
+    "parameters": {
+        "offerer": "0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087",
+        "offer": [
             {
-                "itemType":2,
-                "token":"0x79fcdef22feed20eddacbb2587640e45491b757f",
-                "identifierOrCriteria":"8073",
-                "startAmount":1,
-                "endAmount":1
+                "itemType": 2,
+                "token": "0x79fcdef22feed20eddacbb2587640e45491b757f",
+                "identifierOrCriteria": "8073",
+                "startAmount": 1,
+                "endAmount": 1
             }
         ],
-        "consideration":[
+        "consideration": [
             {
-                "itemType":0,
-                "token":"0x0000000000000000000000000000000000000000",
-                "identifierOrCriteria":0,
-                "startAmount":"2775000000000000000",
-                "endAmount":"2775000000000000000",
-                "recipient":"0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087"
+                "itemType": 0,
+                "token": "0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria": 0,
+                "startAmount": "2775000000000000000",
+                "endAmount": "2775000000000000000",
+                "recipient": "0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087"
             },
             {
-                "itemType":0,
-                "token":"0x0000000000000000000000000000000000000000",
-                "identifierOrCriteria":0,
-                "startAmount":"75000000000000000",
-                "endAmount":"75000000000000000",
-                "recipient":"0x8De9C5A032463C561423387a9648c5C7BCC5BC90"
+                "itemType": 0,
+                "token": "0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria": 0,
+                "startAmount": "75000000000000000",
+                "endAmount": "75000000000000000",
+                "recipient": "0x8De9C5A032463C561423387a9648c5C7BCC5BC90"
             },
             {
-                "itemType":0,
-                "token":"0x0000000000000000000000000000000000000000",
-                "identifierOrCriteria":0,
-                "startAmount":"150000000000000000",
-                "endAmount":"150000000000000000",
-                "recipient":"0x2c47540d6f4589a974e651f13a27dd9a62f30b89"
+                "itemType": 0,
+                "token": "0x0000000000000000000000000000000000000000",
+                "identifierOrCriteria": 0,
+                "startAmount": "150000000000000000",
+                "endAmount": "150000000000000000",
+                "recipient": "0x2c47540d6f4589a974e651f13a27dd9a62f30b89"
             }
         ],
-        "startTime":"1655779246",
-        "endTime":"1655865646",
-        "orderType":2,
-        "zone":"0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
-        "zoneHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
-        "salt":"13",
-        "conduitKey":"0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-        "totalOriginalConsiderationItems":3,
-        "counter":0
+        "startTime": "1655779246",
+        "endTime": "1655865646",
+        "orderType": 2,
+        "zone": "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
+        "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "salt": "13",
+        "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+        "totalOriginalConsiderationItems": 3,
+        "counter": 0
     },
-    "signature":"0xd2c4b9617f0137a5d4c236a10577b4038d423b685c20e164c8a78789dd10b5f7c55db5577ab1196a73cf5f8cceacef176f649004dd8c8aa6a4cf231835e9ee0f"
+    "signature": "0xd2c4b9617f0137a5d4c236a10577b4038d423b685c20e164c8a78789dd10b5f7c55db5577ab1196a73cf5f8cceacef176f649004dd8c8aa6a4cf231835e9ee0f"
 }
 export const order721 = {
     "parameters": {
@@ -108,7 +125,7 @@ export const order721 = {
                 "recipient": "0x545ed214984f3ec57fb6a614f2a6211f0481547f"
             }
         ],
-        "totalOriginalConsiderationItems":3,
+        "totalOriginalConsiderationItems": 3,
         "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
         "counter": 0
     },

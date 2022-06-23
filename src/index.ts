@@ -15,7 +15,9 @@ import {
 } from "./api/types"
 import {WalletInfo} from "web3-wallets";
 import {OrderComponents, OrderWithCounter, MatchOrdersParams, Order} from "./types";
-import {validateOrder, validateOrderWithCounter} from "./utils/schemas";
+import {seaportAssert} from "./utils/assert";
+
+const {validateOrder, validateOrderWithCounter} = seaportAssert
 
 export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     public walletInfo: WalletInfo
@@ -111,7 +113,7 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
                 const order = JSON.parse(val) as OrderWithCounter
                 if (!validateOrderWithCounter(order)) throw validateOrderWithCounter.errors
                 const {parameters} = order;
-                return order.parameters as OrderComponents
+                return parameters as OrderComponents
             })
             return this.contracts.cancelOrders(orderComp)
         }

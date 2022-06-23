@@ -1,5 +1,5 @@
 //
-import {Web3Assert,Schema} from "web3-assert";
+import {Web3Assert, Schema} from "web3-assert";
 
 const userSchema = {
     type: "object",
@@ -192,7 +192,9 @@ const orderSchema = {
 };
 
 const assert = new Web3Assert()
-export const validateOrderV2 = assert.compile(orderV2Schema as Schema)
-export const validateOrderWithCounter = assert.compile(orderWithCounterSchema as Schema)
-export const validateOrder = assert.compile(orderSchema as Schema)
+export const seaportAssert = {
+    validateOrder: assert.compile(orderSchema as Schema),
+    validateOrderV2: assert.compile(orderV2Schema as Schema),
+    validateOrderWithCounter: assert.compile(orderWithCounterSchema as Schema)
+}
 //

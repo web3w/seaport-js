@@ -16,18 +16,18 @@ const chainId = 4
                 "asset": {
                     "tokenId": "8001",
                     "tokenAddress": "0x5FecBbBAf9f3126043A48A35eb2eb8667D469D53",
-                    "schemaName": "ERC721",
-                    "collection": {
-                        "royaltyFeePoints": 0,
-                        "royaltyFeeAddress": ""
-                    }
+                    "schemaName": "ERC721"
                 },
                 "startAmount": 0.02
             } as SellOrderParams
             const order = await sdk.createSellOrder(sellParams)
-            const res = await sdk.fulfillOrders({orderList: [{orderStr: JSON.stringify(order)}]})
+
+            const orderStr = JSON.stringify(order)
+            // const res = await sdk.cancelOrders([orderStr])
+
+            const res = await sdk.fulfillOrders({orderList: [{orderStr}]})
+            await res.wait()
             console.log(res.hash)
-            console.log(await res.wait())
             // const query = {
             //     asset_contract_address: '0x5fecbbbaf9f3126043a48a35eb2eb8667d469d53', //
             //     token_ids: ['8001'],
