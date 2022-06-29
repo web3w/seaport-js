@@ -38,10 +38,10 @@ const apiConfig = {
                 },
                 "startAmount": 0.02
             } as SellOrderParams
-            const order = await sdk.sea.createSellOrder(sellParams)
+            const order = await sdk.contracts.createSellOrder(sellParams)
 
             // const callData = await sdk.fulfillBasicOrder({order})
-            const callData = await sdk.sea.fulfillAdvancedOrder({order})
+            const callData = await sdk.contracts.fulfillAdvancedOrder({order,takerAmount:"1"})
             const tx = await sdk.swap.batchBuyWithETHSimulate([{
                 value: callData?.value?.toString() || "",
                 tradeData: callData?.data || "",

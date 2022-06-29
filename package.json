@@ -1,6 +1,6 @@
 {
   "name": "seaport-js",
-  "version": "1.1.5",
+  "version": "1.1.7",
   "description": "Javascript SDK for the seaport protocol",
   "main": "lib/index.js",
   "type": "lib/index.d.ts",
@@ -18,7 +18,7 @@
     "lib"
   ],
   "scripts": {
-    "release": "tsc && npm publish",
+    "release": "tsc && npm publish && git tag $npm_package_version && git push --tag",
     "dev:tsc": "tsc -w -p tsconfig.json",
     "eslint": "eslint --fix src --ext .ts --max-warnings=0",
     "build:node": "webpack -c config/webpack.node.config.js",
@@ -32,9 +32,9 @@
   "dependencies": {
     "merkletreejs": "^0.2.31",
     "query-string": "^7.1.1",
-    "web3-accounts": "1.2.4",
+    "web3-accounts": "1.2.6",
     "web3-assert": "^1.0.1",
-    "web3-wallets": "^2.1.1"
+    "web3-wallets": "^2.1.2"
   },
   "devDependencies": {
     "@types/node": "^12.20.41",

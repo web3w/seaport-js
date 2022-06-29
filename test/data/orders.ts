@@ -31,6 +31,37 @@ export const asset721 = {
 }
 
 
+export const orderV2 = {
+    "offerer": "0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401",
+    "zone": "0x0000000000000000000000000000000000000000",
+    "orderType": 2,
+    "startTime": "1655517905",
+    "endTime": "1655517905057",
+    "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "salt": "0x181748e8725",
+    "offer": [
+        {
+            "itemType": 3,
+            "token": "0xb6316833725f866f2aad846de30a5f50f09e247b",
+            "identifierOrCriteria": "1655202183834",
+            "startAmount": "1",
+            "endAmount": "1"
+        }
+    ],
+    "consideration": [
+        {
+            "itemType": 0,
+            "token": "0x0000000000000000000000000000000000000000",
+            "identifierOrCriteria": "0",
+            "startAmount": "20000000000000000",
+            "endAmount": "20000000000000000",
+            "recipient": "0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401"
+        }
+    ],
+    "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+    "counter": 0
+}
+
 export const gemOrder = {
     "parameters": {
         "offerer": "0x7db3E3f10faD9DB3a2DA202Ddfe62e6A05b86087",

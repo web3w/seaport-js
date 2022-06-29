@@ -47,10 +47,10 @@ const chainId = 1
                 asset,
                 "startAmount": 0.6
             } as SellOrderParams
-            const approve = await sdk.getOrderApprove(sellParams, OrderSide.Sell)
+            // const approve = await sdk.getOrderApprove(sellParams, OrderSide.Sell)
             const order = await sdk.createSellOrder(sellParams)
             // await sdk.contracts.checkOrderPost(JSON.stringify(order))
-            const res = await sdk.api.postOrder(JSON.stringify(order))
+            const res = await sdk.postOrder(JSON.stringify(order))
             console.log("postOrder success", res)
 
             // const tx = await sdk.fulfillOrder(JSON.stringify(order))

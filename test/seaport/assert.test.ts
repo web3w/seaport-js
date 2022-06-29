@@ -1,5 +1,5 @@
-import {validateOrderWithCounter} from "../../src/utils/schemas";
+import {seaportAssert} from "../../src/utils/assert";
 import {erc8001} from "../data/orders";
 
 
-if (!validateOrderWithCounter(erc8001)) console.log(validateOrderWithCounter.errors)
+if (!seaportAssert.validateOrderWithCounter(erc8001)) console.log(seaportAssert.validateOrderWithCounter.errors)

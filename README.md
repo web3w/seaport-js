@@ -98,7 +98,7 @@ const assetsQuery = {
     include_orders: true,
 } as AssetsQueryParams
 
-const assetFee = await seaport.getAssetsFees(assetsQuery)
+const assetFee = await seaport.getAssetsFees([asset_contract_addresses])
 
 const asset = await seaport.api.getAssets(assetsQuery) 
 ```
@@ -184,7 +184,7 @@ const listing = await seaport.createSellOrder({
 ```ts
 // const orderStr = JSON.stringify(offer)
 const orderStr = JSON.stringify(listing)
-const order = await seaport.api.postOrder(orderStr).catch((err: any) => {
+const order = await seaport.postOrder(orderStr).catch((err: any) => {
     throw err
 }) 
 ```
@@ -211,6 +211,9 @@ const {orders, count} = await seaport.api.getOrders({
     token_ids: [tokenId],
     side: OrderSide.Sell
 }, 2)
+
+// Get Owner Orders
+const {orders, count} = await seaport.getOwnerOrders()
 ```
 
 Note that the listing price of an asset is equal to the `currentPrice` of the **lowest valid sell order** on the asset.

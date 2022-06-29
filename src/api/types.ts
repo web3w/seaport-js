@@ -5,8 +5,8 @@ import {FeesInfo} from "web3-accounts";
 import {OpenSeaAccount, OrderWithCounter} from "../types";
 
 export interface OrdersQueryParams {
-    token_ids: string[]
-    asset_contract_address: string
+    token_ids?: string[]
+    asset_contract_address?: string
     payment_token_address?: string
     include_bundled?: boolean
     maker?: string
@@ -44,7 +44,7 @@ type OrderProtocolToProtocolData = {
     seaport: OrderWithCounter;
 };
 export type OrderProtocol = keyof OrderProtocolToProtocolData;
-export type ProtocolData =  OrderProtocolToProtocolData[OrderProtocol];
+export type ProtocolData = OrderProtocolToProtocolData[OrderProtocol];
 
 // Protocol agnostic order data
 type OrderType = "basic" | "dutch" | "english" | "criteria";

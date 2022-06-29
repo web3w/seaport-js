@@ -29,7 +29,7 @@ const chainId = 1
 
             // const order = await sdk.sea.createSellOrder(sellParams)
             // console.log(order)
-            const res = await sdk.api.postOrder(JSON.stringify(order721))
+            const res = await sdk.postOrder(JSON.stringify(order721))
 
 
         } catch (e) {

@@ -1,9 +1,8 @@
-// @ts-ignore
+
 import * as secrets from '../../../secrets.json'
 import {BuyOrderParams, OrderSide} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";
 import {apiConfig} from "../data/orders";
-import {openseaAssetToAsset} from "../../src/utils/order";
 
 const buyer = '0x32f4B63A46c1D12AD82cABC778D75aBF9889821a'
 
@@ -29,10 +28,10 @@ const chainId = 4
                 "startAmount": 0.002
             } as BuyOrderParams
 
-            const apporve = await sdk.getOrderApprove(buyParams, OrderSide.Buy)
+            // const apporve = await sdk.getOrderApprove(buyParams, OrderSide.Buy)
             const order = await sdk.createBuyOrder(buyParams)
             // console.log(order)
-            const res = await sdk.api.postOrder(JSON.stringify(order))
+            const res = await sdk.postOrder(JSON.stringify(order))
             console.log(res)
 
             // const tx = await sdk.fulfillOrder(JSON.stringify(order))

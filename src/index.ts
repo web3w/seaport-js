@@ -11,7 +11,7 @@ import {
 
 import {
     AssetsQueryParams,
-    AssetCollection
+    AssetCollection, OrdersQueryParams, OrderV2
 } from "./api/types"
 import {WalletInfo} from "web3-wallets";
 import {OrderComponents, OrderWithCounter, MatchOrdersParams, Order} from "./types";
@@ -29,7 +29,7 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     constructor(wallet: WalletInfo, config?: APIConfig) {
         super()
         const {chainId, address} = wallet
-        let conf: APIConfig = {chainId, account: address}
+        let conf: APIConfig = {chainId}
         if (config) {
             conf = {...conf, ...config}
         }
@@ -151,9 +151,28 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
         return this.api.getAssets(tokens)
     }
 
-    async getAssetsFees(tokens: AssetsQueryParams): Promise<FeesInfo[]> {
-        const assets: AssetCollection[] = await this.api.getAssets(tokens)
-        return assets.map(val => (<FeesInfo>{
+    async getOwnerOrders(tokens?: OrdersQueryParams): Promise<{ orders: OrderV2[], count: number }> {
+        if (tokens) {
+            tokens.owner = tokens.owner || this.walletInfo.address
+        } else {
+            tokens = {
+                owner: this.walletInfo.address,
+                limit: 10,
+                side: OrderSide.All
+            }
+        }
+        return this.api.getOrders(tokens)
+    }
+
+    async postOrder(orderStr: string) {
+        return this.api.postOrder(orderStr)
+    }
+
+    async getAssetsFees(assetAddresses: string[]): Promise<FeesInfo[]> {
+        const assets = assetAddresses.map(val => ({asset_contract_addresses: val}))
+        const tokens: AssetsQueryParams = {assets}
+        const collections: AssetCollection[] = await this.api.getAssets(tokens)
+        return collections.map(val => (<FeesInfo>{
             royaltyFeeAddress: val.royaltyFeeAddress,
             royaltyFeePoints: val.royaltyFeePoints,
             protocolFeePoints: val.protocolFeePoints,

@@ -81,26 +81,42 @@ export class SeaportAPI extends BaseFetch {
     }
 
     public async getOrders(queryParams: OrdersQueryParams, retries = 2): Promise<{ orders: OrderV2[], count: number }> {
-        const {token_ids, asset_contract_address} = queryParams
+        // const {token_ids, asset_contract_address} = queryParams
         try {
-            // side: queryParams.side || OrderSide.Buy
-            const query = {
-                token_ids,
-                asset_contract_address,
-                limit: queryParams.limit || 10
-            }
+            queryParams.limit = queryParams.limit || 2
+            queryParams.order_by = queryParams.order_by || 'created_date'
 
-            const orderSide = queryParams.side == OrderSide.Buy ? 'offers' : 'listings'
-            const apiPath = `/v2/orders/${this.chainPath}/seaport/${orderSide}`
-            console.log(`${this.apiBaseUrl}${apiPath}?${QueryString.stringify(query)}`)
+            // if (!queryParams.limit) throw new Error("GetOrders params error")
+
 
             const headers = {
                 "X-API-KEY": this.apiKey || OPENSEA_API_KEY
             }
-            const reqList = [await this.get(apiPath, query, {headers})]
+
+            const reqList: any[] = []
+
+            const apiPath = `/v2/orders/${this.chainPath}/seaport/`
             if (queryParams.side == OrderSide.All) {
-                const apiPath = `/v2/orders/${this.chainPath}/seaport/offers`
-                reqList.push(await this.get(apiPath, query, {headers}))
+                delete queryParams.side
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                const query = QueryString.stringify(queryParams)
+                const apiPathOffer = apiPath + 'offers'
+                console.log(`${this.apiBaseUrl}${apiPathOffer}?${query}`)
+                reqList.push(await this.get(apiPathOffer, queryParams, {headers}))
+                const apiPathListing = apiPath + 'listings'
+                console.log(`${this.apiBaseUrl}${apiPathListing}?${query}`)
+                reqList.push(await this.get(apiPathListing, queryParams, {headers}))
+
+            } else {
+                const orderSide = queryParams.side ? 'offers' : 'listings'
+                delete queryParams.side
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                const query = QueryString.stringify(queryParams)
+                console.log(`${this.apiBaseUrl}${apiPath + orderSide}?${query}`)
+                reqList.push(await this.get(apiPath + orderSide, queryParams, {headers}))
+
             }
             const orders: OrderV2[] = []
 
