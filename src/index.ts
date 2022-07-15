@@ -106,17 +106,19 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     }
 
     async cancelOrders(orders: string[]) {
-        if (orders.length == 0) {
-            return this.contracts.bulkCancelOrders()
-        } else {
-            const orderComp = orders.map((val) => {
-                const order = JSON.parse(val) as OrderWithCounter
-                if (!validateOrderWithCounter(order)) throw validateOrderWithCounter.errors
-                const {parameters} = order;
-                return parameters as OrderComponents
-            })
-            return this.contracts.cancelOrders(orderComp)
-        }
+        if (orders.length == 0) throw new Error("cancelOrders error")
+        const orderComp = orders.map((val) => {
+            const order = JSON.parse(val) as OrderWithCounter
+            if (!validateOrderWithCounter(order)) throw validateOrderWithCounter.errors
+            const {parameters} = order;
+            return parameters as OrderComponents
+        })
+        return this.contracts.cancelOrders(orderComp)
+
+    }
+
+    async cancelAllOrders(nonce?: string) {
+        return this.contracts.bulkCancelOrders()
     }
 
     async getAssetBalances(asset: Asset, account?: string): Promise<string> {
@@ -170,7 +172,7 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
 
     async getAssetsFees(assetAddresses: string[]): Promise<FeesInfo[]> {
         const assets = assetAddresses.map(val => ({asset_contract_addresses: val}))
-        const tokens: AssetsQueryParams = {assets}
+        const tokens: AssetsQueryParams = {assets, limit: 1}
         const collections: AssetCollection[] = await this.api.getAssets(tokens)
         return collections.map(val => (<FeesInfo>{
             royaltyFeeAddress: val.royaltyFeeAddress,

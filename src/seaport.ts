@@ -350,7 +350,7 @@ export class Seaport extends EventEmitter {
             address: this.walletInfo.address,
             points: ONE_HUNDRED_PERCENT_BP - payPoints
         })
-        const tokeneAmount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+        const tokeneAmount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals||18)
         const {fees: consideration} = computeFees(recipients, tokeneAmount, paymentToken.address)
         return this.createOrder(offer, consideration, expirationTime, listingTime)
     }
