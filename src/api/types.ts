@@ -36,6 +36,7 @@ export interface AssetCollection extends FeesInfo {
     schema_name?: string
     nft_version?: string
     created_date?: string
+    supports_wyvern?: boolean
     sell_orders?: any
 }
 

@@ -49,7 +49,7 @@ export class SeaportAPI extends BaseFetch {
         const assetList = list.join('&')
         const query = {
             include_orders: include_orders || false,
-            limit: limit || 10
+            limit: limit || 1
         }
         if (owner) {
             query['owner'] = owner
@@ -71,7 +71,8 @@ export class SeaportAPI extends BaseFetch {
                 protocolFeePoints: Number(val.collection?.opensea_seller_fee_basis_points),
                 royaltyFeeAddress: val.collection?.payout_address,
                 sell_orders: val.sell_orders,
-                token_id: val.token_id
+                token_id: val.token_id,
+                supports_wyvern: val.supports_wyvern
             }))
         } catch (error: any) {
             this.throwOrContinue(error, retries)

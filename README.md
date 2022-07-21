@@ -1,6 +1,7 @@
 # seaport-js<!-- omit in toc -->
 
-SDK for the Seaport protocol v1.1 
+SDK for the Seaport protocol v1.1
+https://opensea.io/
 
 ## Installation
 
@@ -16,11 +17,10 @@ To get started, create a new OpenSeaJS client, called an OpenSeaPort 🚢, using
 
 ```JavaScript
 import {SeaportSDK} from 'seaport-js'
+import {Web3Wallets} from 'web3-wallets'
 
-const seaport = new SeaportSDK({
-    chainId: 4,
-    address: "0x9F7A946d935c8Efc7A8329C0d894A69bA241345A"
-})
+const {chainId, address} = new Web3Wallets('metamask')
+const seaport = new SeaportSDK({chainId, address})
 ```
 
 In the browser environment, only the chainId and address need to be configured，If you want to use the bash environment,
