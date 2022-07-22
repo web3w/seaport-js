@@ -13,7 +13,7 @@ npm i seaport-js
 
 ## Getting Started
 
-To get started, create a new OpenSeaJS client, called an OpenSeaPort 🚢, using your chainId and address:
+To get started, create a new Seaport client, using your chainId and address:
 
 ```JavaScript
 import {SeaportSDK} from 'seaport-js'
@@ -37,6 +37,10 @@ type WalletInfo = {
 type APIConfig = {
     apiKey?: string; //opensea api key
 }
+const rpcUrl = {url: "https://..."}
+const wallet = {chainId, address, privateKeys: ["0x..."]}
+const config = {apiKey: "xx-xxx"}
+const seaport = new SeaportSDK(wallet, config)
 ``` 
 
 Advanced Settings
@@ -44,8 +48,7 @@ Advanced Settings
 ```ts
 type WalletInfo = {
     offsetGasLimitRatio?: number; // Set the GAS limit offset of the wallet to be greater than 1 eg：1.2
-}
-# TODO
+} 
 ```
 
 ### Fetching Assets
@@ -85,10 +88,17 @@ actions will assume you're referring to a non-fungible, ERC721 asset. Other opti
 You can fetch an asset using the `OpenSeaAPI`, which will return an `OpenSeaAsset` for you (`OpenSeaAsset`
 extends `Asset`):
 
+Owner Asset
+
 ```TypeScript
 
-const ownerAsset = (await seaport.getOwnerAssets({limit: 1}))[0]
+const ownerAssets = (await seaport.getOwnerAssets({limit: 1}))
 
+```
+
+Query Asset
+
+```ts
 
 const assetsQuery = {
     assets: [{
@@ -101,35 +111,6 @@ const assetsQuery = {
 const assetFee = await seaport.getAssetsFees([asset_contract_addresses])
 
 const asset = await seaport.api.getAssets(assetsQuery) 
-```
-
-#### Checking Balances and Ownerships
-
-The nice thing about the `Asset` type is that it unifies logic between fungibles, non-fungibles, and semi-fungibles.
-
-Once you have an `Asset`, you can see how many any account owns, regardless of whether it's an ERC-20 token or a
-non-fungible good:
-
-```JavaScript
-
-const asset = {
-    tokenId: '9',
-    tokenAddress: '0xb556f251eacbec4badbcddc4a146906f2c095bee',
-    schemaName: 'ERC721'
-}
-
-const balance = await seaport.getAssetBalances(asset, accountAddress)
-
-```
-
-You can use this same method for fungible ERC-20 tokens like wrapped ETH (WETH). As a convenience, you can use this
-fungible wrapper for checking fungible balances:
-
-```JavaScript
-const balanceOfWETH = await seaport.getTokenBalance({
-    accountAddress, // string
-    tokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
-})
 ```
 
 ### Making Offers
@@ -312,5 +293,34 @@ const transactionHash = await seaport.transfer({
     },
     toAddress,
     quantity: 2,
+})
+```
+
+#### Checking Balances and Ownerships
+
+The nice thing about the `Asset` type is that it unifies logic between fungibles, non-fungibles, and semi-fungibles.
+
+Once you have an `Asset`, you can see how many any account owns, regardless of whether it's an ERC-20 token or a
+non-fungible good:
+
+```JavaScript
+
+const asset = {
+    tokenId: '9',
+    tokenAddress: '0xb556f251eacbec4badbcddc4a146906f2c095bee',
+    schemaName: 'ERC721'
+}
+
+const balance = await seaport.getAssetBalances(asset, accountAddress)
+
+```
+
+You can use this same method for fungible ERC-20 tokens like wrapped ETH (WETH). As a convenience, you can use this
+fungible wrapper for checking fungible balances:
+
+```JavaScript
+const balanceOfWETH = await seaport.getTokenBalance({
+    accountAddress, // string
+    tokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 })
 ```

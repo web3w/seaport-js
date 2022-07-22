@@ -1,4 +1,5 @@
 
+// @ts-ignore
 import * as secrets from '../../../secrets.json'
 import {BuyOrderParams, OrderSide} from "web3-accounts";
 import {SeaportSDK} from "../../src/index";
@@ -15,7 +16,7 @@ const chainId = 4
             privateKeys: secrets.privateKeys
         }, apiConfig[chainId])
         try {
-            const openseaAsset = (await sdk.getOwnerAssets({limit: 1}))[0]
+            // const openseaAsset = (await sdk.getOwnerAssets({limit: 1}))[0]
             // const asset = openseaAssetToAsset(openseaAsset)
             const asset = {
                 tokenId: '1',

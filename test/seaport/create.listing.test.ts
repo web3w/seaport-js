@@ -18,8 +18,8 @@ const chainId = 1
             privateKeys: secrets.privateKeys
         }, apiConfig[chainId])
         try {
-            // const openseaAsset = (await sdk.getOwnerAssets({limit: 1}))[0]
-            // console.log(openseaAsset)
+            const openseaAsset = (await sdk.getOwnerAssets({limit: 1}))[0]
+            console.log(openseaAsset)
             // const sellParams = {
             //     "asset": {
             //         "tokenId": asset.token_id,

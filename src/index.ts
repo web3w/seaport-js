@@ -4,16 +4,26 @@ import {SeaportAPI} from "./api/seaport";
 import {SwapEx} from "./swapEx/swapEx";
 
 import {
-    Asset, FeesInfo,
-    APIConfig, Web3Accounts, ExchangetAgent, OrderSide,
-    CreateOrderParams, MatchParams, SellOrderParams, BuyOrderParams, MatchOrderOption, transactionToCallData
+    Asset,
+    FeesInfo,
+    APIConfig,
+    Web3Accounts,
+    ExchangetAgent,
+    OrderSide,
+    CreateOrderParams,
+    MatchParams,
+    SellOrderParams,
+    BuyOrderParams,
+    MatchOrderOption,
+    transactionToCallData,
+    AdjustOrderParams, ETHToken
 } from "web3-accounts"
 
 import {
     AssetsQueryParams,
     AssetCollection, OrdersQueryParams, OrderV2
 } from "./api/types"
-import {WalletInfo} from "web3-wallets";
+import {WalletInfo, utils} from "web3-wallets";
 import {OrderComponents, OrderWithCounter, MatchOrdersParams, Order} from "./types";
 import {seaportAssert} from "./utils/assert";
 
@@ -53,6 +63,11 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     async createSellOrder(params: SellOrderParams): Promise<OrderWithCounter> {
         return this.contracts.createSellOrder(params)
     }
+
+    async adjustOrder(params: AdjustOrderParams) {
+      return this.contracts.adjustOrder(params)
+    }
+
 
     async createBuyOrder(params: BuyOrderParams): Promise<OrderWithCounter> {
         return this.contracts.createBuyOrder(params)
@@ -136,6 +151,7 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
             rpcUrl: params.rpcUrl
         })
     }
+
 
     async transfer(asset: Asset, to: string, quantity: number) {
         return this.user.transfer(asset, to, quantity)

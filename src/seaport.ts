@@ -3,18 +3,23 @@ import EventEmitter from 'events'
 import {SEAPORT_CONTRACTS_ADDRESSES, SeaportABI} from './contracts/index'
 
 import {
-    APIConfig, ApproveInfo,
+    AdjustOrderParams,
+    APIConfig,
+    ApproveInfo,
+    Asset,
     BuyOrderParams,
     CreateOrderParams,
-    MatchParams,
+    ETHToken,
     NullToken,
     OrderSide,
     SellOrderParams,
-    Token, transactionToCallData,
+    Token,
     Web3Accounts,
 } from 'web3-accounts'
 import {
+    Contract,
     EIP712Message,
+    ethers,
     ethSend,
     getChainRpcUrl,
     getEIP712StructHash,
@@ -23,13 +28,14 @@ import {
     NULL_ADDRESS,
     NULL_BLOCK_HASH,
     WalletInfo,
-    Contract, ethers
+    utils
 } from "web3-wallets"
 
 import {BigNumber} from "ethers";
 import {
     AdvancedOrder,
-    ConsiderationItem, FulfillOrdersMetadata, InputCriteria, InsufficientApprovals,
+    ConsiderationItem,
+    FulfillOrdersMetadata,
     OfferItem,
     Order,
     OrderComponents,
@@ -51,17 +57,14 @@ import {
     SEAPORT_CONTRACT_VERSION
 } from "./constants";
 import {generateCriteriaResolvers} from "./utils/criteria";
-import {
-    getSummedTokenAndIdentifierAmounts,
-    isCriteriaItem,
-    TimeBasedItemParams
-} from "./utils/item";
+import {getSummedTokenAndIdentifierAmounts, isCriteriaItem, TimeBasedItemParams} from "./utils/item";
 import {
     mapOrderAmountsFromFilledStatus,
     mapOrderAmountsFromUnitsToFill,
     validateAndSanitizeFromOrderStatus
 } from "./utils/order";
 import {generateFulfillOrdersFulfillments, getAdvancedOrderNumeratorDenominator} from "./utils/fulfill";
+import {formatUnits} from "@ethersproject/units/src.ts/index";
 
 export function computeFees(recipients: { address: string, points: number }[],
                             tokenTotal: BigNumber,
@@ -154,13 +157,6 @@ export class Seaport extends EventEmitter {
         this.defaultConduitKey = NO_CONDUIT;
     }
 
-    // public static SeaportInfo() {
-    //     return {
-    //         abi: SeaportABI,
-    //         address: SEAPORT_CONTRACTS_ADDRESSES
-    //     }
-    // }
-
     public async getOrderApprove({
                                      asset,
                                      quantity = 1,
@@ -181,11 +177,11 @@ export class Seaport extends EventEmitter {
                 calldata,
                 balances
             } = await this.userAccount.getTokenApprove(paymentToken.address, operator);
-            const amount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals)
+            const amount = utils.parseUnits(startAmount.toString(), paymentToken.decimals)
             if (amount.gt(balances)) {
                 throw 'CheckOrderMatch: buyer erc20Token  gt balances'
             }
-            const spend = ethers.utils.parseUnits(startAmount.toString(), decimals)
+            const spend = utils.parseUnits(startAmount.toString(), decimals)
             return {
                 isApprove: spend.lt(allowance),
                 balances,
@@ -350,9 +346,52 @@ export class Seaport extends EventEmitter {
             address: this.walletInfo.address,
             points: ONE_HUNDRED_PERCENT_BP - payPoints
         })
-        const tokeneAmount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals||18)
+        const tokeneAmount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals || 18)
         const {fees: consideration} = computeFees(recipients, tokeneAmount, paymentToken.address)
         return this.createOrder(offer, consideration, expirationTime, listingTime)
+    }
+
+    async adjustOrder(params: AdjustOrderParams) {
+        const {
+            orderStr,
+            basePrice,
+            paymentToken,
+            royaltyFeePoints,
+            royaltyFeeAddress,
+            quantity,
+            expirationTime
+        } = params
+        const orderSigned = JSON.parse(orderStr)
+        const order: OrderComponents = orderSigned.parameters
+        const offer: OfferItem = order.offer[0]
+        const consideration: ConsiderationItem = order.consideration[0]
+        let startAmount = utils.formatEther(basePrice)
+        if (consideration.token.toLowerCase() != NULL_ADDRESS) {
+            const erc20Decimals = await this.userAccount.getERC20Decimals(consideration.token)
+            const decimals = Number(erc20Decimals)
+            startAmount = utils.formatUnits(basePrice, decimals); //
+        }
+
+        const schemaName = offer.itemType == ItemType.ERC1155 ? "ERC1155" : "ERC721"
+        const asset: Asset = {
+            tokenAddress: offer.token,
+            tokenId: offer.identifierOrCriteria,
+            schemaName,
+            collection: {
+                royaltyFeePoints,
+                royaltyFeeAddress
+            }
+        }
+        const sellParams = {
+            asset,
+            startAmount: Number(startAmount),
+            quantity: quantity || Number(offer.startAmount),
+            listingTime: Number(order.startTime),
+            expirationTime: expirationTime || Number(order.endTime),
+            paymentToken: paymentToken || NullToken
+        }
+
+        return this.createSellOrder(sellParams)
     }
 
     /**
