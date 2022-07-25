@@ -25,29 +25,30 @@ const apiConfig = {
             privateKeys: secrets.privateKeys
         }, apiConfig[chainId])
         try {
-            const asset = (await sdk.getOwnerAssets({limit: 2}))[1]
+
             const sellParams = {
                 "asset": {
-                    "tokenId": asset.token_id,
-                    "tokenAddress": asset.address,
-                    "schemaName": asset.schema_name,
+                    "tokenId": "26",
+                    "tokenAddress": "0x5f069e9e7311da572299533b7078859085f7d82c",
+                    "schemaName": "ERC721",
                     "collection": {
-                        "royaltyFeePoints": asset.royaltyFeePoints,
-                        "royaltyFeeAddress": asset.royaltyFeeAddress
+                        "royaltyFeePoints": 0,
+                        "royaltyFeeAddress": ""
                     }
                 },
-                "startAmount": 0.02
+                "startAmount": 0.012
             } as SellOrderParams
-            const order = await sdk.contracts.createSellOrder(sellParams)
+            const order = await sdk.createSellOrder(sellParams)
 
-            // const callData = await sdk.fulfillBasicOrder({order})
-            const callData = await sdk.contracts.fulfillAdvancedOrder({order,takerAmount:"1"})
+            // const callData = await sdk.contracts.fulfillBasicOrder({order}) //
+            const callData = await sdk.contracts.fulfillAdvancedOrder({order, takerAmount: "1"})
+            const gas = await sdk.contracts.estimateGas(transactionToCallData(callData))
             const tx = await sdk.swap.batchBuyWithETHSimulate([{
                 value: callData?.value?.toString() || "",
                 tradeData: callData?.data || "",
                 marketId: "1"
             }])
-           console.log("OK",tx)
+            console.log("OK", tx)
 
         } catch (e) {
             console.log(e)

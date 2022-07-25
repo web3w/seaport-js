@@ -614,9 +614,20 @@ export class Seaport extends EventEmitter {
                 consideration: [...order.parameters.consideration, ...tips]
             },
         };
+
+
+        //1.advancedOrder:AdvancedOrder
+        // const advancedOrder = {
+        //     ...orderAccountingForTips,
+        //     numerator: 1,
+        //     denominator: 1,
+        //     extraData: "0x",
+        // }
+
         //1.advancedOrder:AdvancedOrder
         const advancedOrder = {
-            ...orderAccountingForTips,
+            parameters: {...order.parameters, totalOriginalConsiderationItems: order.parameters.consideration.length},
+            signature: order.signature,
             numerator: 1,
             denominator: 1,
             extraData: "0x",
@@ -640,7 +651,8 @@ export class Seaport extends EventEmitter {
             orderStatus
         );
         // const currentBlockTimestamp = currentBlock.timestamp;
-        const currentBlockTimestamp = new Date().getTime();
+        // const currentBlockTimestamp = new Date().getTime();
+        const currentBlockTimestamp = Date.now();
         const timeBasedItemParams: TimeBasedItemParams = {
             startTime: sanitizedOrder.parameters.startTime,
             endTime: sanitizedOrder.parameters.endTime,
@@ -661,7 +673,6 @@ export class Seaport extends EventEmitter {
         const fulfillerConduitKey = NULL_BLOCK_HASH
         // 4.recipient: 0x0A56b3317eD60dC4E1027A63ffbE9df6fb102401
         recipient = recipient || this.walletInfo.address
-
 
         return this.seaport.populateTransaction.fulfillAdvancedOrder(advancedOrder, criteriaResolvers, fulfillerConduitKey, recipient, payableOverrides)
     }
@@ -695,7 +706,8 @@ export class Seaport extends EventEmitter {
         );
 
         // const currentBlockTimestamp = currentBlock.timestamp;
-        const currentBlockTimestamp = new Date().getTime();
+        // const currentBlockTimestamp = new Date().getTime();
+        const currentBlockTimestamp = Date.now();
         const timeBasedItemParams: TimeBasedItemParams = {
             startTime: sanitizedOrder.parameters.startTime,
             endTime: sanitizedOrder.parameters.endTime,
