@@ -103,7 +103,7 @@ export class SwapEx extends EventEmitter {
                     reject(err.message)
                 } else {
                     //0x4e487b71
-                    if (err.data.substr(0, 10) == '0x4e487b71') {
+                    if (err.data.substring(0, 10) == '0x4e487b71') {
                         console.log('Panic(uint256)', err.data)
                         throw 'BatchBuyWithETHSimulate Panic'
                     }
@@ -145,11 +145,6 @@ export class SwapEx extends EventEmitter {
         const tx = await this.swapExContract.populateTransaction.batchBuyFromSingleMarketWithETH(marketProxy, tradeDetails, {value})
         const callData = {...tx, value: tx.value?.toString()} as LimitedCallSpec
         return ethSend(this.walletInfo, callData)
-        // console.log("batchBuyFromSingleMarketWithETH", swaps.length, callData.value)
-        // swaps.map(val => {
-        //     console.log(val.marketId, val.value)
-        // })
-        // return getEstimateGas(this.walletInfo.rpcUrl || "", callData)
 
     }
 

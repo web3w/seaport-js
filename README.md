@@ -19,7 +19,7 @@ To get started, create a new Seaport client, using your chainId and address:
 import {SeaportSDK} from 'seaport-js'
 import {Web3Wallets} from 'web3-wallets'
 
-const {chainId, address} = new Web3Wallets('metamask')
+const {chainId, address} = new Web3Wallets({name:'metamask'})
 const seaport = new SeaportSDK({chainId, address})
 ```
 
@@ -42,14 +42,7 @@ const wallet = {chainId, address, privateKeys: ["0x..."]}
 const config = {apiKey: "xx-xxx"}
 const seaport = new SeaportSDK(wallet, config)
 ``` 
-
-Advanced Settings
-
-```ts
-type WalletInfo = {
-    offsetGasLimitRatio?: number; // Set the GAS limit offset of the wallet to be greater than 1 eg：1.2
-} 
-```
+ 
 
 ### Fetching Assets
 

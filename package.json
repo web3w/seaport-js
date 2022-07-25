@@ -1,6 +1,6 @@
 {
   "name": "seaport-js",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "description": "Javascript SDK for the seaport protocol",
   "main": "lib/index.js",
   "type": "lib/index.d.ts",
@@ -27,7 +27,7 @@
     "query-string": "^7.1.1",
     "web3-accounts": "1.2.20",
     "web3-assert": "^1.0.2",
-    "web3-wallets": "^2.2.2"
+    "web3-wallets": "^2.2.3"
   },
   "devDependencies": {
     "ts-node": "^10.9.1",

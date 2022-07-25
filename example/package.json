@@ -1,0 +1,52 @@
+{
+  "name": "seaport-js",
+  "version": "0.0.0",
+  "private": true,
+  "homepage": "https://web3w.github.io/seaport-js",
+  "dependencies": {
+    "@ant-design/icons": "^4.7.0",
+    "antd": "^4.21.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "web3-accounts": "^1.2.12",
+    "web3-qrcode-modal": "^1.0.6",
+    "web3-wallets": "^2.2.3"
+  },
+  "scripts": {
+    "start": "GENERATE_SOURCEMAP=false react-scripts   --openssl-legacy-provider start",
+    "build": "GENERATE_SOURCEMAP=false react-scripts build",
+    "link": "sudo npm link ..",
+    "deploy": "npm run build && gh-pages -d build"
+  },
+  "devDependencies": {
+    "assert": "^2.0.0",
+    "gh-pages": "^4.0.0",
+    "https-browserify": "^1.0.0",
+    "net": "^1.0.2",
+    "os-browserify": "^0.3.0",
+    "stream-http": "^3.2.0",
+    "tls": "^0.0.1",
+    "typescript": "~4.6.4",
+    "url": "^0.11.0",
+    "web3": "^1.7.3"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

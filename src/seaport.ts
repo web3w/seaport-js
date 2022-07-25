@@ -604,16 +604,13 @@ export class Seaport extends EventEmitter {
 
         const {parameters: {offer, consideration}} = orderWithAdjustedFills;
 
-        // const conduitKey = await this.conduitController.getKey(this.conduit.address)
-        // const {parameters} = order;
-        // const {offer, consideration} = parameters
-        const orderAccountingForTips = {
-            ...order,
-            parameters: {
-                parameters,
-                consideration: [...order.parameters.consideration, ...tips]
-            },
-        };
+        // const orderAccountingForTips = {
+        //     ...order,
+        //     parameters: {
+        //         parameters,
+        //         consideration: [...order.parameters.consideration, ...tips]
+        //     },
+        // };
 
 
         //1.advancedOrder:AdvancedOrder

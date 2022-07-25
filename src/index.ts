@@ -26,6 +26,7 @@ import {
 import {WalletInfo, utils} from "web3-wallets";
 import {OrderComponents, OrderWithCounter, MatchOrdersParams, Order} from "./types";
 import {seaportAssert} from "./utils/assert";
+import pkg from "../package.json"
 
 const {validateOrder, validateOrderWithCounter} = seaportAssert
 
@@ -35,6 +36,7 @@ export class SeaportSDK extends EventEmitter implements ExchangetAgent {
     public swap: SwapEx
     public api: SeaportAPI
     public user: Web3Accounts
+    public version = pkg.version
 
     constructor(wallet: WalletInfo, config?: APIConfig) {
         super()
