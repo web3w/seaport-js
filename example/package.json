@@ -5,13 +5,15 @@
   "homepage": "https://web3w.github.io/seaport-js",
   "dependencies": {
     "@ant-design/icons": "^4.7.0",
+    "ahooks": "^3.5.2",
     "antd": "^4.21.6",
+    "moment": "^2.29.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "web3-accounts": "^1.2.12",
     "web3-qrcode-modal": "^1.0.6",
-    "web3-wallets": "^2.2.3"
+    "web3-wallets": "^2.2.5"
   },
   "scripts": {
     "start": "GENERATE_SOURCEMAP=false react-scripts   --openssl-legacy-provider start",

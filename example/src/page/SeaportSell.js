@@ -3,8 +3,10 @@ import React, {useContext, useEffect, useState} from "react";
 import {Context} from '../AppContext'
 import Avatar from "antd/es/avatar/avatar";
 import {coinbaseIcon, metamaskIcon, walletConnectIcon} from "../js/config";
+import {utils} from "web3-wallets";
+import {transformDate} from "../js/helper";
 
-export function SeaportSDK() {
+export function SeaportSell() {
     const {sdk} = useContext(Context);
     const [assets, setAssets] = useState([])
     const [orders, setOrders] = useState([])
@@ -26,11 +28,13 @@ export function SeaportSDK() {
         },
         {
             title: 'currentPrice',
-            dataIndex: 'currentPrice'
+            dataIndex: 'currentPrice',
+            render: (text, record) => (<a>{utils.formatEther(text)}</a>)
         },
         {
             title: 'expirationTime',
-            dataIndex: 'expirationTime'
+            dataIndex: 'expirationTime',
+            render: (text, record) => (<a>{transformDate(text)}</a>)
         },
         {
             title: 'Action',
@@ -38,7 +42,7 @@ export function SeaportSDK() {
             render: (text, record) => (<Button onClick={() => seaportCancelOrder(record)}>CancelOrder</Button>)
         }
     ];
-    const seaportCreateOrder = async (item) => {
+    const seaportCreateSellOrder = async (item) => {
         const order = await sdk.createSellOrder({
                 asset: {
                     tokenAddress: item.address,
@@ -53,20 +57,36 @@ export function SeaportSDK() {
             }
         )
         const orderStr = JSON.stringify(order)
-
         const orderRes = await sdk.postOrder(orderStr)
+        message.success("Seaport  post sell order success")
+    }
 
-        message.success("Seaport  post order success")
+    const seaportCreateBuyOrder = async (item) => {
+        const order = await sdk.createBuyOrder({
+                asset: {
+                    tokenAddress: item.address,
+                    tokenId: item.token_id,
+                    schemaName: item.schema_name,
+                    collection: {
+                        royaltyFeeAddress: item.royaltyFeeAddress,
+                        royaltyFeePoints: item.royaltyFeePoints
+                    }
+                },
+                startAmount: 0.001
+            }
+        )
+        const orderStr = JSON.stringify(order)
+        const orderRes = await sdk.postOrder(orderStr)
+        message.success("Seaport  post buy order success")
     }
     const seaportCancelOrder = async (item) => {
-        debugger
         await sdk.contracts.cancelOrders([item.protocolData.parameters])
     }
     useEffect(() => {
         async function fetchOrder() {
-            const orders = await sdk.getOwnerAssets()
-            console.log(orders)
-            setAssets(orders)
+            const assets = await sdk.getOwnerAssets()
+            // console.log(orders)
+            setAssets(assets)
         }
 
         fetchOrder().catch(err => {
@@ -95,7 +115,9 @@ export function SeaportSDK() {
                             description={item.description}
                         />
                         <Space>
-                            <Button key={item.name} onClick={() => seaportCreateOrder(item)}>CreateOrder</Button>
+                            <Button key={item.name}
+                                    onClick={() => seaportCreateSellOrder(item)}>CreateSellOrder</Button>
+                            <Button key={item.name} onClick={() => seaportCreateBuyOrder(item)}>CreateBuyOrder</Button>
 
                             <Button onClick={() => seaportGetOrder(item)}>GetOrder</Button>
                         </Space>
@@ -105,7 +127,6 @@ export function SeaportSDK() {
                     </List.Item>
                 )}
             />}
-
 
 
         </>

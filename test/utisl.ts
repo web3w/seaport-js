@@ -7,6 +7,7 @@ import {ethers} from "ethers";
  * This saves us RPC calls and latency.
  */
 export function getOrderHash (orderComponents: OrderComponents): string {
+    // ethers.utils.formatEther()
     const offerItemTypeString =
         "OfferItem(uint8 itemType,address token,uint256 identifierOrCriteria,uint256 startAmount,uint256 endAmount)";
     const considerationItemTypeString =

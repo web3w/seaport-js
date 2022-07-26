@@ -2,7 +2,8 @@ import {message, Layout, Descriptions, Menu} from 'antd';
 import React, {useContext, useState} from "react";
 import "../assets/css/index.css"
 import {Context} from '../AppContext'
-import {SeaportSDK} from "./SeaportSDK";
+import {SeaportSell} from "./SeaportSell";
+import {SeaportBuy} from "./SeaportBuy";
 import {WalletList} from "./WalletList";
 // import {WalletFunc} from "./WalletFunc";
 import pkg from "../../package.json"
@@ -13,11 +14,12 @@ const {Header, Content, Footer, Sider} = Layout;
 export function MainLayout() {
     const {wallet, sdk} = useContext(Context);
     const [collapsed, setCollapsed] = useState(false);
-    const [page, setPage] = useState("seaport");
+    const [page, setPage] = useState("seaport_sell");
 
 
     const items = [
-        {label: 'Seaport', key: 'seaport'},
+        {label: 'SeaportSell', key: 'seaport_sell'},
+        {label: 'SeaportBuy', key: 'seaport_buy'},
         {label: 'Wallets', key: 'wallets'},
     ];
     return (
@@ -45,7 +47,8 @@ export function MainLayout() {
                     </Descriptions>}
                 </Header>
                 {page == "wallets" && <WalletList/>}
-                {page == "seaport" && <SeaportSDK/>}
+                {page == "seaport_sell" && <SeaportSell/>}
+                {page == "seaport_buy" && <SeaportBuy/>}
             </Layout>
         </Layout>
         // </AppContext.Provider>
