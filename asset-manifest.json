@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/seaport-js/static/css/main.973b2ea9.css",
-    "main.js": "/seaport-js/static/js/main.2e74184a.js",
+    "main.js": "/seaport-js/static/js/main.7a439a35.js",
     "static/media/metamask.png": "/seaport-js/static/media/metamask.c6e8e59392f8bfc48238.png",
     "static/media/coinbaseWallet.svg": "/seaport-js/static/media/coinbaseWallet.0a0007e4bb4981fa8f155b9fd1724092.svg",
     "index.html": "/seaport-js/index.html"
   },
   "entrypoints": [
     "static/css/main.973b2ea9.css",
-    "static/js/main.2e74184a.js"
+    "static/js/main.7a439a35.js"
   ]
 }
