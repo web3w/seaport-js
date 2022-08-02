@@ -190,45 +190,48 @@ export class Seaport extends EventEmitter {
         }
     }
 
-    public async createOrder(offer: OfferItem[], consideration: ConsiderationItem[], expirationTime: number, listingTime?: number): Promise<OrderWithCounter> {
+    public async createOrder(offer: OfferItem[], consideration: ConsiderationItem[], expirationTime: number, listingTime?: number, isCheckOrderApprove?: boolean): Promise<OrderWithCounter> {
         const offerer = this.walletInfo.address
         const operator = this.conduit.address
-        for (const offerAsset of offer) {
-            let approve = false, data: LimitedCallSpec | undefined
-            if (offerAsset.itemType == ItemType.ERC20) {
-                const {
-                    balances,
-                    allowance,
-                    calldata
-                } = await this.userAccount.getTokenApprove(offerAsset.token, operator)
-                if (ethers.BigNumber.from(offerAsset.endAmount).gt(balances)) {
-                    throw new Error("Offer amount less than balances")
+        if (isCheckOrderApprove) {
+            for (const offerAsset of offer) {
+                let approve = false, data: LimitedCallSpec | undefined
+                if (offerAsset.itemType == ItemType.ERC20) {
+                    const {
+                        balances,
+                        allowance,
+                        calldata
+                    } = await this.userAccount.getTokenApprove(offerAsset.token, operator)
+                    if (ethers.BigNumber.from(offerAsset.endAmount).gt(balances)) {
+                        throw new Error("Offer amount less than balances")
+                    }
+                    if (ethers.BigNumber.from(offerAsset.endAmount).gt(allowance)) {
+                        approve = false
+                        data = calldata
+                    }
+                } else {
+                    const {isApprove, balances, calldata} = await this.userAccount.getAssetApprove({
+                        tokenAddress: offerAsset.token,
+                        tokenId: offerAsset.identifierOrCriteria,
+                        schemaName: offerAsset.itemType == ItemType.ERC721 ? "ERC721" : "ERC115"
+                    }, operator)
+                    if (ethers.BigNumber.from(offerAsset.endAmount).gt(balances)) {
+                        throw new Error("Offer amount less than balances")
+                    }
+                    if (!isApprove) {
+                        approve = false
+                        data = calldata
+                    }
                 }
-                if (ethers.BigNumber.from(offerAsset.endAmount).gt(allowance)) {
-                    approve = false
-                    data = calldata
-                }
-            } else {
-                const {isApprove, balances, calldata} = await this.userAccount.getAssetApprove({
-                    tokenAddress: offerAsset.token,
-                    tokenId: offerAsset.identifierOrCriteria,
-                    schemaName: offerAsset.itemType == ItemType.ERC721 ? "ERC721" : "ERC115"
-                }, operator)
-                if (ethers.BigNumber.from(offerAsset.endAmount).gt(balances)) {
-                    throw new Error("Offer amount less than balances")
-                }
-                if (!isApprove) {
-                    approve = false
-                    data = calldata
-                }
-            }
 
-            if (!approve && data) {
-                const tx = await this.ethSend(data)
-                await tx.wait();
-                console.log("CreateBuyOrder Token setApproved");
+                if (!approve && data) {
+                    const tx = await this.ethSend(data)
+                    await tx.wait();
+                    console.log("CreateBuyOrder Token setApproved");
+                }
             }
         }
+
 
         const orderType = OrderType.FULL_RESTRICTED
         const startTime = (listingTime || Math.round(Date.now() / 1000)).toString()
@@ -306,7 +309,8 @@ export class Seaport extends EventEmitter {
 
         const {fees} = computeFees(recipients, tokenAmount, paymentToken.address)
         consideration.push(...fees)
-        return this.createOrder(offer, consideration, expirationTime)
+        const listingTime = Math.floor(Date.now() / 1000)
+        return this.createOrder(offer, consideration, expirationTime, listingTime, true)
     }
 
     public async createSellOrder({
@@ -315,7 +319,8 @@ export class Seaport extends EventEmitter {
                                      paymentToken = NullToken,
                                      expirationTime = 0,
                                      startAmount,
-                                     listingTime
+                                     listingTime,
+                                     isCheckOrderApporve
                                  }: SellOrderParams): Promise<OrderWithCounter> {
 
         const assetAmount = quantity.toString()
@@ -348,7 +353,7 @@ export class Seaport extends EventEmitter {
         })
         const tokeneAmount = ethers.utils.parseUnits(startAmount.toString(), paymentToken.decimals || 18)
         const {fees: consideration} = computeFees(recipients, tokeneAmount, paymentToken.address)
-        return this.createOrder(offer, consideration, expirationTime, listingTime)
+        return this.createOrder(offer, consideration, expirationTime, listingTime, isCheckOrderApporve)
     }
 
     async adjustOrder(params: AdjustOrderParams) {
@@ -604,22 +609,6 @@ export class Seaport extends EventEmitter {
 
         const {parameters: {offer, consideration}} = orderWithAdjustedFills;
 
-        // const orderAccountingForTips = {
-        //     ...order,
-        //     parameters: {
-        //         parameters,
-        //         consideration: [...order.parameters.consideration, ...tips]
-        //     },
-        // };
-
-
-        //1.advancedOrder:AdvancedOrder
-        // const advancedOrder = {
-        //     ...orderAccountingForTips,
-        //     numerator: 1,
-        //     denominator: 1,
-        //     extraData: "0x",
-        // }
 
         //1.advancedOrder:AdvancedOrder
         const advancedOrder = {

@@ -25,9 +25,9 @@
   "dependencies": {
     "merkletreejs": "^0.2.31",
     "query-string": "^7.1.1",
-    "web3-accounts": "1.2.20",
     "web3-assert": "^1.0.2",
-    "web3-wallets": "^2.2.3"
+    "web3-accounts": "1.2.27",
+    "web3-wallets": "^2.2.20"
   },
   "devDependencies": {
     "ts-node": "^10.9.1",

@@ -189,3 +189,107 @@ export class SeaportAPI extends BaseFetch {
     }
 
 }
+
+// success
+// {
+//     "parameters": {
+//         "offerer": "0x32f4b63a46c1d12ad82cabc778d75abf9889821a",
+//         "zone": "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
+//         "orderType": 2,
+//         "startTime": "1658844163",
+//         "endTime": "1658847761",
+//         "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+//         "salt": "63671428114909039",
+//         "offer": [
+//         {
+//             "itemType": 2,
+//             "token": "0x52f687b1c6aacc92b47da5209cf25d987c876628",
+//             "identifierOrCriteria": "1",
+//             "startAmount": "1",
+//             "endAmount": "1"
+//         }
+//     ],
+//         "consideration": [
+//         {
+//             "itemType": 0,
+//             "token": "0x0000000000000000000000000000000000000000",
+//             "identifierOrCriteria": "0",
+//             "startAmount": "925000000000000000",
+//             "endAmount": "925000000000000000",
+//             "recipient": "0x32f4b63a46c1d12ad82cabc778d75abf9889821a"
+//         },
+//         {
+//             "itemType": 0,
+//             "token": "0x0000000000000000000000000000000000000000",
+//             "identifierOrCriteria": "0",
+//             "startAmount": "25000000000000000",
+//             "endAmount": "25000000000000000",
+//             "recipient": "0x8De9C5A032463C561423387a9648c5C7BCC5BC90"
+//         },
+//         {
+//             "itemType": 0,
+//             "token": "0x0000000000000000000000000000000000000000",
+//             "identifierOrCriteria": "0",
+//             "startAmount": "50000000000000000",
+//             "endAmount": "50000000000000000",
+//             "recipient": "0x32f4b63a46c1d12ad82cabc778d75abf9889821a"
+//         }
+//     ],
+//         "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+//         "counter": 0,
+//         "totalOriginalConsiderationItems": 3
+// },
+//     "signature": "0x88d4b8510925d34b49513ee78d5be83cb2602a4cb812e322a0e073238dbc880928259da9c963bdd5081d5cf0909fb84289030a1933fa5fb0695a6861752b764a1c"
+// }
+
+
+// {
+//     "parameters": {
+//         "offerer": "0x32f4b63a46c1d12ad82cabc778d75abf9889821a",
+//         "zone": "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
+//         "orderType": 2,
+//         "startTime": "1658843602",
+//         "endTime": "1658847201",
+//         "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+//         "salt": "23144606790842543",
+//         "offer": [
+//         {
+//             "itemType": 2,
+//             "token": "0xb840ec0db3b9ab7b920710d6fc21a9d206f994aa",
+//             "identifierOrCriteria": "686",
+//             "startAmount": "1",
+//             "endAmount": "1"
+//         }
+//     ],
+//         "consideration": [
+//         {
+//             "itemType": 0,
+//             "token": "0x0000000000000000000000000000000000000000",
+//             "identifierOrCriteria": "0",
+//             "startAmount": "832500000000000000",
+//             "endAmount": "832500000000000000",
+//             "recipient": "0x32f4b63a46c1d12ad82cabc778d75abf9889821a"
+//         },
+//         {
+//             "itemType": 0,
+//             "token": "0x0000000000000000000000000000000000000000",
+//             "identifierOrCriteria": "0",
+//             "startAmount": "22500000000000000",
+//             "endAmount": "22500000000000000",
+//             "recipient": "0x8De9C5A032463C561423387a9648c5C7BCC5BC90"
+//         },
+//         {
+//             "itemType": 0,
+//             "token": "0x0000000000000000000000000000000000000000",
+//             "identifierOrCriteria": "0",
+//             "startAmount": "45000000000000000",
+//             "endAmount": "45000000000000000",
+//             "recipient": "0xb0e9fe550ca345daa529c603ed28ef869e2882cd"
+//         }
+//     ],
+//         "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+//         "counter": 0,
+//         "totalOriginalConsiderationItems": 3
+// },
+//     "signature": "0x388e1d5e78090cb2175524bcc179b9996acbf5951bebb5967fae4c398f0c0b0761904d83310c48897d542af310a65ea20c83e3b801e7462d2be125c4d7bf36a21c"
+// }
