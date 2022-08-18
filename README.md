@@ -1,7 +1,7 @@
 # seaport-js<!-- omit in toc -->
 
 SDK for the Seaport protocol v1.1
-https://opensea.io/
+https://web3w.github.io/seaport-js/
 
 ## Installation
 

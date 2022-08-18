@@ -41,6 +41,7 @@ export class SeaportAPI extends BaseFetch {
     }
 
     //https://docs.opensea.io/reference/getting-assets
+    // https://api.opensea.io/api/v1/assets?asset_contract_address=0xbd3531da5cf5857e7cfaa92426877b022e612cf8
     public async getAssets(queryParams: AssetsQueryParams, retries = 2): Promise<AssetCollection[]> {
         const {owner, include_orders, limit, assets} = queryParams
         const list = assets ? assets.map((val: any) => {
